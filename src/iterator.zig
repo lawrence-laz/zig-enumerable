@@ -31,6 +31,18 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             return result;
         }
 
+        pub fn any(
+            self: *const Self,
+            comptime filter: fn (TItem) bool,
+        ) bool {
+            const self_x = @constCast(self);
+            while (self_x.next()) |item| {
+                if (filter(item)) {
+                    return true;
+                }
+            }
+            return false;
+        }
         pub inline fn where(
             self: *const Self,
             comptime filter: fn (TItem) bool,
@@ -116,4 +128,15 @@ test ".sum()" {
     // Assert
     const expected: u8 = 6;
     try std.testing.expectEqual(expected, actual);
+}
+test ".any()" {
+    // Arrange
+    const numbers = &[_]u8{ 1, 2, 3 };
+    var iterator = from.slice(u8, numbers);
+
+    // Act
+    const actual = iterator.any(even);
+
+    // Assert
+    try std.testing.expectEqual(true, actual);
 }
