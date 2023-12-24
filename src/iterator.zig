@@ -2,6 +2,7 @@ const std = @import("std");
 const from = @import("from.zig");
 const WhereIterator = @import("where_iterator.zig").WhereIterator;
 const SelectIterator = @import("select_iterator.zig").SelectIterator;
+const ConcatIterator = @import("concat_iterator.zig").ConcatIterator;
 
 pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
     return struct {
@@ -64,6 +65,17 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
         ) Iterator(TDest, SelectIterator(TItem, TDest, project, TImpl)) {
             const foo = @constCast(&self.impl);
             return .{ .impl = SelectIterator(TItem, TDest, project, TImpl){ .prev_iter = foo } };
+        }
+
+        pub inline fn concat(
+            self: *const Self,
+            other_iter: anytype,
+        ) Iterator(TItem, ConcatIterator(TItem, TImpl, @TypeOf(other_iter.*))) {
+            const foo = @constCast(&self.impl);
+            return .{ .impl = ConcatIterator(TItem, TImpl, @TypeOf(other_iter.*)){
+                .prev_iter = foo,
+                .next_iter = other_iter,
+            } };
         }
     };
 }
@@ -172,4 +184,24 @@ test ".firstOrDefault() when not null" {
     // Assert
     const expected: ?u8 = 1;
     try std.testing.expectEqual(expected, actual);
+}
+
+test ".concat()" {
+    // Arrange
+    const first_slice = &[_]u8{ 1, 2, 3 };
+    const second_slice = &[_]u8{ 4, 5, 6 };
+    var first_iter = from.slice(u8, first_slice);
+    var second_iter = from.slice(u8, second_slice);
+
+    // Act
+    var actual = first_iter.concat(&second_iter);
+
+    // Assert
+    const expected = &[_]u8{ 1, 2, 3, 4, 5, 6 };
+    var index: usize = 0;
+    while (actual.next()) |actual_number| {
+        try std.testing.expectEqual(expected[index], actual_number);
+        index += 1;
+    }
+    try std.testing.expectEqual(@as(usize, 6), index);
 }
