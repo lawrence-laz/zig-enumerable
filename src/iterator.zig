@@ -1,5 +1,6 @@
 const std = @import("std");
 const from = @import("from.zig");
+const WhereIterator = @import("where_iterator.zig").WhereIterator;
 
 pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
     return struct {
@@ -19,6 +20,14 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             }
             return result;
         }
+
+        pub inline fn where(
+            self: *const Self,
+            comptime filter: fn (TItem) bool,
+        ) Iterator(TItem, WhereIterator(TItem, filter, TImpl)) {
+            const foo = @constCast(&self.impl);
+            return .{ .impl = WhereIterator(TItem, filter, TImpl){ .prev_iter = foo } };
+        }
     };
 }
 
@@ -33,4 +42,25 @@ test ".count()" {
 
     // Assert
     try std.testing.expectEqual(expected, actual);
+}
+
+fn even(number: u8) bool {
+    return @rem(number, 2) == 0;
+}
+
+test ".where()" {
+    // Arrange
+    const numbers = &[_]u8{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+    var iterator = from.slice(u8, numbers);
+
+    // Act
+    var actual = iterator.where(even);
+
+    // Assert
+    const expected = &[_]u8{ 2, 4, 6, 8, 10 };
+    var index: usize = 0;
+    while (actual.next()) |actual_number| {
+        try std.testing.expectEqual(expected[index], actual_number);
+        index += 1;
+    }
 }
