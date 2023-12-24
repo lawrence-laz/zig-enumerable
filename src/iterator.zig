@@ -22,6 +22,15 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             return result;
         }
 
+        pub fn sum(self: *const Self) TItem {
+            const self_x = @constCast(self);
+            var result: TItem = 0;
+            while (self_x.next()) |number| {
+                result += number;
+            }
+            return result;
+        }
+
         pub inline fn where(
             self: *const Self,
             comptime filter: fn (TItem) bool,
@@ -94,4 +103,17 @@ test ".select()" {
         try std.testing.expectEqual(expected[index], actual_number);
         index += 1;
     }
+}
+
+test ".sum()" {
+    // Arrange
+    const numbers = &[_]u8{ 1, 2, 3 };
+    var iterator = from.slice(u8, numbers);
+
+    // Act
+    var actual = iterator.sum();
+
+    // Assert
+    const expected: u8 = 6;
+    try std.testing.expectEqual(expected, actual);
 }
