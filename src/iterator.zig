@@ -1,6 +1,7 @@
 const std = @import("std");
 const from = @import("from.zig");
 const WhereIterator = @import("where_iterator.zig").WhereIterator;
+const SelectIterator = @import("select_iterator.zig").SelectIterator;
 
 pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
     return struct {
@@ -27,6 +28,15 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
         ) Iterator(TItem, WhereIterator(TItem, filter, TImpl)) {
             const foo = @constCast(&self.impl);
             return .{ .impl = WhereIterator(TItem, filter, TImpl){ .prev_iter = foo } };
+        }
+
+        pub inline fn select(
+            self: *const Self,
+            comptime TDest: type,
+            comptime project: fn (TItem) TDest,
+        ) Iterator(TDest, SelectIterator(TItem, TDest, project, TImpl)) {
+            const foo = @constCast(&self.impl);
+            return .{ .impl = SelectIterator(TItem, TDest, project, TImpl){ .prev_iter = foo } };
         }
     };
 }
@@ -58,6 +68,27 @@ test ".where()" {
 
     // Assert
     const expected = &[_]u8{ 2, 4, 6, 8, 10 };
+    var index: usize = 0;
+    while (actual.next()) |actual_number| {
+        try std.testing.expectEqual(expected[index], actual_number);
+        index += 1;
+    }
+}
+
+fn negative(number: u8) i8 {
+    return @as(i8, @intCast(number)) * -1;
+}
+
+test ".select()" {
+    // Arrange
+    const numbers = &[_]u8{ 1, 2, 3 };
+    var iterator = from.slice(u8, numbers);
+
+    // Act
+    var actual = iterator.select(i8, negative);
+
+    // Assert
+    const expected = &[_]i8{ -1, -2, -3 };
     var index: usize = 0;
     while (actual.next()) |actual_number| {
         try std.testing.expectEqual(expected[index], actual_number);
