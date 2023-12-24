@@ -43,6 +43,12 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             }
             return false;
         }
+
+        pub fn firstOrDefault(self: *const Self) ?TItem {
+            const self_x = @constCast(self);
+            return self_x.next() orelse null;
+        }
+
         pub inline fn where(
             self: *const Self,
             comptime filter: fn (TItem) bool,
@@ -129,6 +135,7 @@ test ".sum()" {
     const expected: u8 = 6;
     try std.testing.expectEqual(expected, actual);
 }
+
 test ".any()" {
     // Arrange
     const numbers = &[_]u8{ 1, 2, 3 };
@@ -139,4 +146,30 @@ test ".any()" {
 
     // Assert
     try std.testing.expectEqual(true, actual);
+}
+
+test ".firstOrDefault() when null" {
+    // Arrange
+    const numbers = &[_]u8{};
+    var iterator = from.slice(u8, numbers);
+
+    // Act
+    const actual = iterator.firstOrDefault();
+
+    // Assert
+    const expected: ?u8 = null;
+    try std.testing.expectEqual(expected, actual);
+}
+
+test ".firstOrDefault() when not null" {
+    // Arrange
+    const numbers = &[_]u8{ 1, 2, 3 };
+    var iterator = from.slice(u8, numbers);
+
+    // Act
+    const actual = iterator.firstOrDefault();
+
+    // Assert
+    const expected: ?u8 = 1;
+    try std.testing.expectEqual(expected, actual);
 }
