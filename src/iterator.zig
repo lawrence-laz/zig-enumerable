@@ -4,6 +4,7 @@ const WhereIterator = @import("where_iterator.zig").WhereIterator;
 const SelectIterator = @import("select_iterator.zig").SelectIterator;
 const ConcatIterator = @import("concat_iterator.zig").ConcatIterator;
 const TakeIterator = @import("take_iterator.zig").TakeIterator;
+const SkipIterator = @import("skip_iterator.zig").SkipIterator;
 
 pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
     return struct {
@@ -85,6 +86,18 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
         ) Iterator(TItem, TakeIterator(TItem, TImpl)) {
             const self_x = @constCast(&self.impl);
             return .{ .impl = TakeIterator(TItem, TImpl){
+                .prev_iter = self_x,
+                .index = 0,
+                .count = item_count,
+            } };
+        }
+
+        pub inline fn skip(
+            self: *const Self,
+            item_count: usize,
+        ) Iterator(TItem, SkipIterator(TItem, TImpl)) {
+            const self_x = @constCast(&self.impl);
+            return .{ .impl = SkipIterator(TItem, TImpl){
                 .prev_iter = self_x,
                 .index = 0,
                 .count = item_count,
@@ -253,4 +266,35 @@ test ".take() when iter is too short, stops at end" {
         index += 1;
     }
     try std.testing.expectEqual(@as(usize, 2), index);
+}
+
+test ".skip() when iter is long enough, takes after `item_count`" {
+    // Arrange
+    const numbers = &[_]u8{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+    var iter = from.slice(u8, numbers);
+
+    // Act
+    var actual = iter.skip(3);
+
+    // Assert
+    const expected = &[_]u8{ 4, 5, 6, 7, 8, 9, 10 };
+    var index: usize = 0;
+    while (actual.next()) |actual_number| {
+        try std.testing.expectEqual(expected[index], actual_number);
+        index += 1;
+    }
+    try std.testing.expectEqual(@as(usize, 7), index);
+}
+
+test ".skip() when iter is too short, takes empty" {
+    // Arrange
+    const numbers = &[_]u8{ 1, 2 };
+    var iter = from.slice(u8, numbers);
+
+    // Act
+    var actual = iter.skip(3);
+
+    // Assert
+    const expected: ?u8 = null;
+    try std.testing.expectEqual(expected, actual.next());
 }
