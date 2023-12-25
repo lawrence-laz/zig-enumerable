@@ -4,6 +4,7 @@ const WhereIterator = @import("where_iterator.zig").WhereIterator;
 const SelectIterator = @import("select_iterator.zig").SelectIterator;
 const ConcatIterator = @import("concat_iterator.zig").ConcatIterator;
 const TakeIterator = @import("take_iterator.zig").TakeIterator;
+const TakeWhileIterator = @import("take_while_iterator.zig").TakeWhileIterator;
 const SkipIterator = @import("skip_iterator.zig").SkipIterator;
 
 pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
@@ -89,6 +90,17 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
                 .prev_iter = self_x,
                 .index = 0,
                 .count = item_count,
+            } };
+        }
+
+        pub inline fn takeWhile(
+            self: *const Self,
+            comptime filter: fn (TItem) bool,
+        ) Iterator(TItem, TakeWhileIterator(TItem, filter, TImpl)) {
+            const self_x = @constCast(&self.impl);
+            return .{ .impl = TakeWhileIterator(TItem, filter, TImpl){
+                .prev_iter = self_x,
+                .completed = false,
             } };
         }
 
@@ -266,6 +278,55 @@ test ".take() when iter is too short, stops at end" {
         index += 1;
     }
     try std.testing.expectEqual(@as(usize, 2), index);
+}
+
+test ".takeWhile() stop in the middle" {
+    // Arrange
+    const numbers = &[_]u8{ 2, 4, 6, 7, 8, 9, 10 };
+    var iter = from.slice(u8, numbers);
+
+    // Act
+    var actual = iter.takeWhile(even);
+
+    // Assert
+    const expected = &[_]u8{ 2, 4, 6 };
+    var index: usize = 0;
+    while (actual.next()) |actual_number| {
+        try std.testing.expectEqual(expected[index], actual_number);
+        index += 1;
+    }
+    try std.testing.expectEqual(@as(usize, 3), index);
+}
+
+test ".takeWhile() stop at the end" {
+    // Arrange
+    const numbers = &[_]u8{ 2, 4, 6, 8, 10 };
+    var iter = from.slice(u8, numbers);
+
+    // Act
+    var actual = iter.takeWhile(even);
+
+    // Assert
+    const expected = &[_]u8{ 2, 4, 6, 8, 10 };
+    var index: usize = 0;
+    while (actual.next()) |actual_number| {
+        try std.testing.expectEqual(expected[index], actual_number);
+        index += 1;
+    }
+    try std.testing.expectEqual(@as(usize, 5), index);
+}
+
+test ".takeWhile() stop immediately" {
+    // Arrange
+    const numbers = &[_]u8{ 1, 2, 3, 4, 5 };
+    var iter = from.slice(u8, numbers);
+
+    // Act
+    var actual = iter.takeWhile(even);
+
+    // Assert
+    const expected: ?u8 = null;
+    try std.testing.expectEqual(expected, actual.next());
 }
 
 test ".skip() when iter is long enough, takes after `item_count`" {
