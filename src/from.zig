@@ -2,6 +2,7 @@ const std = @import("std");
 const Iterator = @import("iterator.zig").Iterator;
 const SliceIterator = @import("from/slice_iterator.zig").SliceIterator;
 const RangeIterator = @import("from/range_iterator.zig").RangeIterator;
+const RangeEveryIterator = @import("from/range_every_iterator.zig").RangeEveryIterator;
 
 pub inline fn tokenIterator(comptime TItem: type, token_iterator: anytype) Iterator(TItem, @TypeOf(token_iterator)) {
     const TokenIteratorType = @TypeOf(token_iterator);
@@ -27,6 +28,20 @@ pub inline fn range(
     } };
 }
 
+pub inline fn rangeEvery(
+    comptime TNumber: type,
+    from_inclusive: TNumber,
+    to_exclusive: TNumber,
+    step: TNumber,
+) Iterator(TNumber, RangeEveryIterator(TNumber)) {
+    return .{ .impl = RangeEveryIterator(TNumber){
+        .from_inclusive = from_inclusive,
+        .to_exclusive = to_exclusive,
+        .current = from_inclusive,
+        .step = step,
+    } };
+}
+
 test "range(u8, ...)" {
     // Act
     var actual = range(u8, 0, 10);
@@ -39,4 +54,18 @@ test "range(u8, ...)" {
         index += 1;
     }
     try std.testing.expectEqual(@as(usize, 10), index);
+}
+
+test "rangeEvery(u8, ...)" {
+    // Act
+    var actual = rangeEvery(u8, 0, 10, 2);
+
+    // Assert
+    var expected = &[_]u8{ 0, 2, 4, 6, 8 };
+    var index: usize = 0;
+    while (actual.next()) |actual_number| {
+        try std.testing.expectEqual(expected[index], actual_number);
+        index += 1;
+    }
+    try std.testing.expectEqual(@as(usize, 5), index);
 }
