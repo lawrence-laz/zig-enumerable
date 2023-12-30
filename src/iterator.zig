@@ -14,6 +14,7 @@ const SkipWhileIterator = @import("skip_while_iterator.zig").SkipWhileIterator;
 const PeekableIterator = @import("peekable_iterator.zig").PeekableIterator;
 const IntersperseIterator = @import("intersperse_iterator.zig").IntersperseIterator;
 const ScanIterator = @import("scan_iterator.zig").ScanIterator;
+const SliceIterator = @import("from/slice_iterator.zig").SliceIterator;
 
 pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
     return struct {
@@ -393,6 +394,24 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
                 maybe_previous = item;
             }
             return true;
+        }
+
+        pub inline fn reverse(
+            self: *const Self,
+        ) Iterator(TItem, SliceIterator(TItem)) {
+            const impl_type_info = @typeInfo(TImpl);
+            comptime var is_reverse_implemented: bool = false;
+            comptime for (impl_type_info.Struct.decls) |decl| {
+                if (std.mem.eql(u8, decl.name, "reverse")) {
+                    is_reverse_implemented = true;
+                }
+            };
+            if (is_reverse_implemented) {
+                var self_impl = self.impl;
+                return .{ .impl = self_impl.reverse() };
+            } else {
+                @compileError("Iterator '" ++ @typeName(TImpl) ++ "' does not implement .reverse().\n");
+            }
         }
     };
 }
@@ -1016,6 +1035,13 @@ test ".window(...)" {
         var expecpted = &[_][6]u8{};
         try expectEqualIter([6]u8, expecpted, actual);
     }
+}
+
+test ".reverse() on slice iter" {
+    var input = &[_]u8{ 1, 2, 3, 4, 5 };
+    var iter = from.slice(u8, input);
+    var actual = iter.reverse();
+    try expectEqualIter(u8, &[_]u8{ 5, 4, 3, 2, 1 }, actual);
 }
 
 fn expectEqualIter(comptime T: type, expected: anytype, actual: anytype) !void {
