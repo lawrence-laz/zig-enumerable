@@ -413,6 +413,60 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
                 @compileError("Iterator '" ++ @typeName(TImpl) ++ "' does not implement .reverse().\n");
             }
         }
+
+        pub inline fn average(self: *const Self) TItem {
+            var self_x = @constCast(self);
+            var total_sum: TItem = 0;
+            var total_count: usize = 0;
+            while (self_x.next()) |item| {
+                total_sum += item;
+                total_count += 1;
+            }
+            const item_type_info = @typeInfo(TItem);
+            if (item_type_info == .Float) {
+                return total_sum / @as(TItem, @floatFromInt(total_count));
+            } else if (item_type_info == .Int) {
+                if (item_type_info.Int.signedness == .unsigned) {
+                    return total_sum / @as(TItem, @intCast(total_count));
+                } else {
+                    @compileError("Signed integer type '" ++ @typeName(TItem) ++ "' should be used either with .averageTrunc() or .averageFloor()");
+                }
+            } else {
+                @compileError("Iterators with item type '" ++ @typeName(TItem) ++ "' do not support .average().");
+            }
+        }
+
+        pub inline fn averageTrunc(self: *const Self) TItem {
+            var self_x = @constCast(self);
+            var total_sum: TItem = 0;
+            var total_count: usize = 0;
+            while (self_x.next()) |item| {
+                total_sum += item;
+                total_count += 1;
+            }
+            const item_type_info = @typeInfo(TItem);
+            if (item_type_info == .Int) {
+                return @divTrunc(total_sum, @as(TItem, @intCast(total_count)));
+            } else {
+                @compileError("Iterators with item type '" ++ @typeName(TItem) ++ "' do not support .averageTrunc().");
+            }
+        }
+
+        pub inline fn averageFloor(self: *const Self) TItem {
+            var self_x = @constCast(self);
+            var total_sum: TItem = 0;
+            var total_count: usize = 0;
+            while (self_x.next()) |item| {
+                total_sum += item;
+                total_count += 1;
+            }
+            const item_type_info = @typeInfo(TItem);
+            if (item_type_info == .Int) {
+                return @divFloor(total_sum, @as(TItem, @intCast(total_count)));
+            } else {
+                @compileError("Iterators with item type '" ++ @typeName(TItem) ++ "' do not support .averageFloor().");
+            }
+        }
     };
 }
 
@@ -1042,6 +1096,32 @@ test ".reverse() on slice iter" {
     var iter = from.slice(u8, input);
     var actual = iter.reverse();
     try expectEqualIter(u8, &[_]u8{ 5, 4, 3, 2, 1 }, actual);
+}
+
+test ".average() floats" {
+    var iter = from.range(f32, 1, 5);
+    var actual = iter.average();
+    try std.testing.expectEqual(@as(f32, 2.5), actual);
+}
+
+test ".average() unsigned ints" {
+    var iter = from.range(u32, 1, 5);
+    var actual = iter.average();
+    try std.testing.expectEqual(@as(u32, 2), actual);
+}
+
+test ".averageFloor() signed ints" {
+    var input = &[_]i32{ -1, -2, -2 };
+    var iter = from.slice(i32, input);
+    var actual = iter.averageFloor();
+    try std.testing.expectEqual(@as(i32, -2), actual);
+}
+
+test ".averageTrunc() signed ints" {
+    var input = &[_]i32{ -1, -2, -2 };
+    var iter = from.slice(i32, input);
+    var actual = iter.averageTrunc();
+    try std.testing.expectEqual(@as(i32, -1), actual);
 }
 
 fn expectEqualIter(comptime T: type, expected: anytype, actual: anytype) !void {
