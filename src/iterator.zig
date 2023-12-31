@@ -432,6 +432,44 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             return true;
         }
 
+        pub inline fn isSortedAscendingBy(
+            self: *const Self,
+            comptime TBy: type,
+            comptime selector: fn (TItem) TBy,
+        ) bool {
+            var self_x = @constCast(self);
+            var maybe_previous_value: ?TBy = null;
+            while (self_x.next()) |current_item| {
+                var current_value = selector(current_item);
+                if (maybe_previous_value) |previous_value| {
+                    if (previous_value > current_value) {
+                        return false;
+                    }
+                }
+                maybe_previous_value = current_value;
+            }
+            return true;
+        }
+
+        pub inline fn isSortedDescendingBy(
+            self: *const Self,
+            comptime TBy: type,
+            comptime selector: fn (TItem) TBy,
+        ) bool {
+            var self_x = @constCast(self);
+            var maybe_previous_value: ?TBy = null;
+            while (self_x.next()) |current_item| {
+                var current_value = selector(current_item);
+                if (maybe_previous_value) |previous_value| {
+                    if (previous_value < current_value) {
+                        return false;
+                    }
+                }
+                maybe_previous_value = current_value;
+            }
+            return true;
+        }
+
         pub inline fn reverse(
             self: *const Self,
         ) Iterator(TItem, SliceIterator(TItem)) {
@@ -1103,6 +1141,60 @@ test ".isSortedDescending()" {
         var input = &[_]u8{ 3, 1, 2 };
         var iter = from.slice(u8, input);
         var actual = iter.isSortedDescending();
+        try std.testing.expectEqual(false, actual);
+    }
+}
+
+test ".isSortedAscendingBy()" {
+    {
+        var input = &[_]Person{
+            .{ .name = "Marry", .age = 1 },
+            .{ .name = "Dave", .age = 2 },
+            .{ .name = "Gerthrude", .age = 3 },
+            .{ .name = "Casper", .age = 4 },
+            .{ .name = "John", .age = 5 },
+        };
+        var iter = from.slice(Person, input);
+        var actual = iter.isSortedAscendingBy(u8, age);
+        try std.testing.expectEqual(true, actual);
+    }
+    {
+        var input = &[_]Person{
+            .{ .name = "Marry", .age = 1 },
+            .{ .name = "Dave", .age = 2 },
+            .{ .name = "Casper", .age = 4 },
+            .{ .name = "John", .age = 5 },
+            .{ .name = "Gerthrude", .age = 3 },
+        };
+        var iter = from.slice(Person, input);
+        var actual = iter.isSortedAscendingBy(u8, age);
+        try std.testing.expectEqual(false, actual);
+    }
+}
+
+test ".isSortedDescendingBy()" {
+    {
+        var input = &[_]Person{
+            .{ .name = "John", .age = 5 },
+            .{ .name = "Casper", .age = 4 },
+            .{ .name = "Gerthrude", .age = 3 },
+            .{ .name = "Dave", .age = 2 },
+            .{ .name = "Marry", .age = 1 },
+        };
+        var iter = from.slice(Person, input);
+        var actual = iter.isSortedDescendingBy(u8, age);
+        try std.testing.expectEqual(true, actual);
+    }
+    {
+        var input = &[_]Person{
+            .{ .name = "John", .age = 5 },
+            .{ .name = "Casper", .age = 4 },
+            .{ .name = "Dave", .age = 2 },
+            .{ .name = "Marry", .age = 1 },
+            .{ .name = "Gerthrude", .age = 3 },
+        };
+        var iter = from.slice(Person, input);
+        var actual = iter.isSortedDescendingBy(u8, age);
         try std.testing.expectEqual(false, actual);
     }
 }
