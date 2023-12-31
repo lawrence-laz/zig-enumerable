@@ -357,6 +357,24 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             return maybe_max_value;
         }
 
+        pub inline fn maxBy(
+            self: *const Self,
+            comptime TBy: type,
+            comptime selector: fn (TItem) TBy,
+        ) ?TItem {
+            var self_x = @constCast(self);
+            var maybe_max_item: ?TItem = null;
+            var maybe_max_value: ?TBy = null;
+            while (self_x.next()) |item| {
+                var current_value = selector(item);
+                if (maybe_max_value == null or current_value > maybe_max_value.?) {
+                    maybe_max_item = item;
+                    maybe_max_value = current_value;
+                }
+            }
+            return maybe_max_item;
+        }
+
         pub inline fn min(self: *const Self) ?TItem {
             var self_x = @constCast(self);
             var maybe_min_value: ?TItem = null;
@@ -910,6 +928,25 @@ test ".max()" {
     var iter = from.slice(u8, input);
     var actual = iter.max();
     var expected: ?u8 = 5;
+    try std.testing.expectEqual(expected, actual);
+}
+
+const Person = struct {
+    name: []const u8,
+    age: u8,
+};
+fn age(person: Person) u8 {
+    return person.age;
+}
+test ".maxBy()" {
+    var input = &[_]Person{
+        .{ .name = "Marry", .age = 1 },     .{ .name = "Dave", .age = 2 },
+        .{ .name = "Gerthrude", .age = 3 }, .{ .name = "Casper", .age = 4 },
+        .{ .name = "John", .age = 5 },
+    };
+    var iter = from.slice(Person, input);
+    var actual = iter.maxBy(u8, age);
+    var expected: ?Person = .{ .name = "John", .age = 5 };
     try std.testing.expectEqual(expected, actual);
 }
 
