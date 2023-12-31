@@ -375,6 +375,24 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             return maybe_max_item;
         }
 
+        pub inline fn minBy(
+            self: *const Self,
+            comptime TBy: type,
+            comptime selector: fn (TItem) TBy,
+        ) ?TItem {
+            var self_x = @constCast(self);
+            var maybe_min_item: ?TItem = null;
+            var maybe_min_value: ?TBy = null;
+            while (self_x.next()) |item| {
+                var current_value = selector(item);
+                if (maybe_min_value == null or current_value < maybe_min_value.?) {
+                    maybe_min_item = item;
+                    maybe_min_value = current_value;
+                }
+            }
+            return maybe_min_item;
+        }
+
         pub inline fn min(self: *const Self) ?TItem {
             var self_x = @constCast(self);
             var maybe_min_value: ?TItem = null;
@@ -947,6 +965,17 @@ test ".maxBy()" {
     var iter = from.slice(Person, input);
     var actual = iter.maxBy(u8, age);
     var expected: ?Person = .{ .name = "John", .age = 5 };
+    try std.testing.expectEqual(expected, actual);
+}
+test ".minBy()" {
+    var input = &[_]Person{
+        .{ .name = "Gerthrude", .age = 3 }, .{ .name = "Casper", .age = 4 },
+        .{ .name = "Marry", .age = 1 },     .{ .name = "Dave", .age = 2 },
+        .{ .name = "John", .age = 5 },
+    };
+    var iter = from.slice(Person, input);
+    var actual = iter.minBy(u8, age);
+    var expected: ?Person = .{ .name = "Marry", .age = 1 };
     try std.testing.expectEqual(expected, actual);
 }
 
