@@ -534,6 +534,75 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
                 @compileError("Iterators with item type '" ++ @typeName(TItem) ++ "' do not support .averageFloor().");
             }
         }
+
+        pub inline fn averageBy(
+            self: *const Self,
+            comptime TBy: type,
+            comptime selector: fn (TItem) TBy,
+        ) TBy {
+            var self_x = @constCast(self);
+            var total_sum: TBy = 0;
+            var total_count: usize = 0;
+            while (self_x.next()) |item| {
+                const item_value = selector(item);
+                total_sum += item_value;
+                total_count += 1;
+            }
+            const item_type_info = @typeInfo(TBy);
+            if (item_type_info == .Float) {
+                return total_sum / @as(TBy, @floatFromInt(total_count));
+            } else if (item_type_info == .Int) {
+                if (item_type_info.Int.signedness == .unsigned) {
+                    return total_sum / @as(TBy, @intCast(total_count));
+                } else {
+                    @compileError("Signed integer type '" ++ @typeName(TBy) ++ "' should be used either with .averageTrunc() or .averageFloor()");
+                }
+            } else {
+                @compileError("Iterators with item type '" ++ @typeName(TBy) ++ "' do not support .average().");
+            }
+        }
+
+        pub inline fn averageTruncBy(
+            self: *const Self,
+            comptime TBy: type,
+            comptime selector: fn (TItem) TBy,
+        ) TBy {
+            var self_x = @constCast(self);
+            var total_sum: TBy = 0;
+            var total_count: usize = 0;
+            while (self_x.next()) |item| {
+                const item_value = selector(item);
+                total_sum += item_value;
+                total_count += 1;
+            }
+            const item_type_info = @typeInfo(TBy);
+            if (item_type_info == .Int) {
+                return @divTrunc(total_sum, @as(TBy, @intCast(total_count)));
+            } else {
+                @compileError("Iterators with item type '" ++ @typeName(TBy) ++ "' do not support .averageTrunc().");
+            }
+        }
+
+        pub inline fn averageFloorBy(
+            self: *const Self,
+            comptime TBy: type,
+            comptime selector: fn (TItem) TBy,
+        ) TBy {
+            var self_x = @constCast(self);
+            var total_sum: TBy = 0;
+            var total_count: usize = 0;
+            while (self_x.next()) |item| {
+                const item_value = selector(item);
+                total_sum += item_value;
+                total_count += 1;
+            }
+            const item_type_info = @typeInfo(TBy);
+            if (item_type_info == .Int) {
+                return @divFloor(total_sum, @as(TBy, @intCast(total_count)));
+            } else {
+                @compileError("Iterators with item type '" ++ @typeName(TBy) ++ "' do not support .averageFloor().");
+            }
+        }
     };
 }
 
@@ -991,9 +1060,11 @@ const Person = struct {
     name: []const u8,
     age: u8,
 };
+
 fn age(person: Person) u8 {
     return person.age;
 }
+
 test ".maxBy()" {
     var input = &[_]Person{
         .{ .name = "Marry", .age = 1 },     .{ .name = "Dave", .age = 2 },
@@ -1005,6 +1076,7 @@ test ".maxBy()" {
     var expected: ?Person = .{ .name = "John", .age = 5 };
     try std.testing.expectEqual(expected, actual);
 }
+
 test ".minBy()" {
     var input = &[_]Person{
         .{ .name = "Gerthrude", .age = 3 }, .{ .name = "Casper", .age = 4 },
@@ -1272,6 +1344,71 @@ test ".averageTrunc() signed ints" {
     var input = &[_]i32{ -1, -2, -2 };
     var iter = from.slice(i32, input);
     var actual = iter.averageTrunc();
+    try std.testing.expectEqual(@as(i32, -1), actual);
+}
+
+const TempReading = struct {
+    location: []const u8,
+    degrees_celsius: f32,
+    day: u32,
+    elevation: i32,
+};
+
+fn temp(reading: TempReading) f32 {
+    return reading.degrees_celsius;
+}
+
+fn day(reading: TempReading) u32 {
+    return reading.day;
+}
+
+fn elevation(reading: TempReading) i32 {
+    return reading.elevation;
+}
+
+test ".averageBy() floats" {
+    var input = &[_]TempReading{
+        .{ .location = "London", .degrees_celsius = 10, .day = 352, .elevation = 11 },
+        .{ .location = "New York", .degrees_celsius = 4, .day = 350, .elevation = 10 },
+        .{ .location = "Tokyo", .degrees_celsius = 9, .day = 357, .elevation = 40 },
+        .{ .location = "Vilnius", .degrees_celsius = 1, .day = 361, .elevation = 112 },
+    };
+    var iter = from.slice(TempReading, input);
+    var actual = iter.averageBy(f32, temp);
+    try std.testing.expectEqual(@as(f32, 6.0), actual);
+}
+
+test ".averageBy() unsigned ints" {
+    var input = &[_]TempReading{
+        .{ .location = "London", .degrees_celsius = 10, .day = 352, .elevation = 11 },
+        .{ .location = "New York", .degrees_celsius = 4, .day = 350, .elevation = 10 },
+        .{ .location = "Tokyo", .degrees_celsius = 9, .day = 357, .elevation = 40 },
+        .{ .location = "Vilnius", .degrees_celsius = 1, .day = 361, .elevation = 112 },
+    };
+    var iter = from.slice(TempReading, input);
+    var actual = iter.averageBy(u32, day);
+    try std.testing.expectEqual(@as(u32, 355), actual);
+}
+
+test ".averageFloorBy() signed ints" {
+    var input = &[_]TempReading{
+        .{ .location = "Carribean Sea", .degrees_celsius = 28.5, .day = 352, .elevation = -1 },
+        .{ .location = "Mediterranean Sea", .degrees_celsius = 14.1, .day = 357, .elevation = -2 },
+        .{ .location = "Baltic Sea", .degrees_celsius = 3.2, .day = 361, .elevation = -2 },
+    };
+    var iter = from.slice(TempReading, input);
+    var actual = iter.averageFloorBy(i32, elevation);
+    try std.testing.expectEqual(@as(i32, -2), actual);
+}
+
+test ".averageTruncBy() signed ints" {
+    var input = &[_]TempReading{
+        .{ .location = "Carribean Sea", .degrees_celsius = 28.5, .day = 352, .elevation = -1 },
+        .{ .location = "Mediterranean Sea", .degrees_celsius = 14.1, .day = 357, .elevation = -2 },
+        .{ .location = "Baltic Sea", .degrees_celsius = 3.2, .day = 361, .elevation = -2 },
+    };
+    var iter = from.slice(TempReading, input);
+    var actual = iter.averageTruncBy(i32, elevation);
     try std.testing.expectEqual(@as(i32, -1), actual);
 }
 
