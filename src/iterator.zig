@@ -399,14 +399,7 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
         pub inline fn reverse(
             self: *const Self,
         ) Iterator(TItem, SliceIterator(TItem)) {
-            const impl_type_info = @typeInfo(TImpl);
-            comptime var is_reverse_implemented: bool = false;
-            comptime for (impl_type_info.Struct.decls) |decl| {
-                if (std.mem.eql(u8, decl.name, "reverse")) {
-                    is_reverse_implemented = true;
-                }
-            };
-            if (is_reverse_implemented) {
+            if (@hasDecl(TImpl, "reverse")) {
                 var self_impl = self.impl;
                 return .{ .impl = self_impl.reverse() };
             } else {
