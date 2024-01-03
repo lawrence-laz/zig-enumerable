@@ -2,6 +2,7 @@ const std = @import("std");
 const from = @import("from.zig");
 const WhereIterator = @import("where_iterator.zig").WhereIterator;
 const SelectIterator = @import("select_iterator.zig").SelectIterator;
+const SelectManyIterator = @import("select_many_iterator.zig").SelectManyIterator;
 const WindowIterator = @import("window_iterator.zig").WindowIterator;
 const ConcatIterator = @import("concat_iterator.zig").ConcatIterator;
 const ZipIterator = @import("zip_iterator.zig").ZipIterator;
@@ -109,6 +110,18 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
         ) Iterator(TDest, SelectIterator(TItem, TDest, project, TImpl)) {
             const foo = @constCast(&self.impl);
             return .{ .impl = SelectIterator(TItem, TDest, project, TImpl){ .prev_iter = foo } };
+        }
+
+        pub inline fn selectMany(
+            self: *const Self,
+            comptime TDest: type,
+            comptime selectFn: fn (TItem) []const TDest,
+        ) Iterator(TDest, SelectManyIterator(TItem, TDest, selectFn, TImpl)) {
+            const foo = @constCast(&self.impl);
+            return .{ .impl = SelectManyIterator(TItem, TDest, selectFn, TImpl){
+                .prev_iter = foo,
+                .slice_iter = null,
+            } };
         }
 
         pub inline fn window(
@@ -675,6 +688,32 @@ test ".select()" {
         try std.testing.expectEqual(expected[index], actual_number);
         index += 1;
     }
+}
+
+const Foo = struct { numbers: []const u8 };
+fn getNumbers(foo: Foo) []const u8 {
+    return foo.numbers;
+}
+test ".selectMany()" {
+    // Arrange
+    const input = &[_]Foo{
+        .{ .numbers = &[_]u8{} },
+        .{ .numbers = &[_]u8{ 1, 2 } },
+        .{ .numbers = &[_]u8{} },
+        .{ .numbers = &[_]u8{3} },
+        .{ .numbers = &[_]u8{} },
+        .{ .numbers = &[_]u8{ 4, 5 } },
+        .{ .numbers = &[_]u8{ 6, 7 } },
+        .{ .numbers = &[_]u8{} },
+    };
+    var iterator = from.slice(Foo, input);
+
+    // Act
+    var actual = iterator.selectMany(u8, getNumbers);
+
+    // Assert
+    const expected = &[_]u8{ 1, 2, 3, 4, 5, 6, 7 };
+    try expectEqualIter(u8, expected, actual);
 }
 
 test ".sum()" {
