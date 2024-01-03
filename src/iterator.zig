@@ -696,15 +696,15 @@ fn getNumbers(foo: Foo) []const u8 {
 }
 test ".selectMany()" {
     // Arrange
-    const input = &[_]Foo{
-        .{ .numbers = &[_]u8{} },
-        .{ .numbers = &[_]u8{ 1, 2 } },
-        .{ .numbers = &[_]u8{} },
-        .{ .numbers = &[_]u8{3} },
-        .{ .numbers = &[_]u8{} },
-        .{ .numbers = &[_]u8{ 4, 5 } },
-        .{ .numbers = &[_]u8{ 6, 7 } },
-        .{ .numbers = &[_]u8{} },
+    const input = &.{
+        .{ .numbers = &.{} },
+        .{ .numbers = &.{ 1, 2 } },
+        .{ .numbers = &.{} },
+        .{ .numbers = &.{3} },
+        .{ .numbers = &.{} },
+        .{ .numbers = &.{ 4, 5 } },
+        .{ .numbers = &.{ 6, 7 } },
+        .{ .numbers = &.{} },
     };
     var iterator = from.slice(Foo, input);
 
@@ -712,7 +712,7 @@ test ".selectMany()" {
     var actual = iterator.selectMany(u8, getNumbers);
 
     // Assert
-    const expected = &[_]u8{ 1, 2, 3, 4, 5, 6, 7 };
+    const expected = &.{ 1, 2, 3, 4, 5, 6, 7 };
     try expectEqualIter(u8, expected, actual);
 }
 
