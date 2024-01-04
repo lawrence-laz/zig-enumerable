@@ -214,9 +214,8 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             self: *const Self,
             other_iter: anytype,
         ) Iterator(TItem, ConcatIterator(TItem, TImpl, @TypeOf(other_iter.*))) {
-            const foo = @constCast(&self.impl);
             return .{ .impl = ConcatIterator(TItem, TImpl, @TypeOf(other_iter.*)){
-                .prev_iter = foo,
+                .prev_iter = @constCast(&self.impl),
                 .next_iter = other_iter,
             } };
         }
