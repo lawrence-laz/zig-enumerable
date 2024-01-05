@@ -5,7 +5,7 @@ pub fn TakeEveryIterator(
     return struct {
         const Self = @This();
 
-        prev_iter: *TPrevIter,
+        prev_iter: TPrevIter,
         every_nth: usize,
 
         pub fn next(self: *Self) ?TItem {

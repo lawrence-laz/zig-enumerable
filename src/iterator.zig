@@ -28,18 +28,18 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
         }
 
         pub fn count(self: *const Self) usize {
-            const self_x = @constCast(self);
+            var self_copy = self.*;
             var result: usize = 0;
-            while (self_x.next()) |_| {
+            while (self_copy.next()) |_| {
                 result += 1;
             }
             return result;
         }
 
         pub fn sum(self: *const Self) TItem {
-            const self_x = @constCast(self);
+            var self_copy = self.*;
             var result: TItem = 0;
-            while (self_x.next()) |number| {
+            while (self_copy.next()) |number| {
                 result += number;
             }
             return result;
@@ -47,11 +47,11 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
 
         pub fn any(
             self: *const Self,
-            comptime filter: fn (TItem) bool,
+            comptime function: fn (TItem) bool,
         ) bool {
-            const self_x = @constCast(self);
-            while (self_x.next()) |item| {
-                if (filter(item)) {
+            var self_copy = self.*;
+            while (self_copy.next()) |item| {
+                if (function(item)) {
                     return true;
                 }
             }
@@ -60,11 +60,11 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
 
         pub fn all(
             self: *const Self,
-            comptime filter: fn (TItem) bool,
+            comptime function: fn (TItem) bool,
         ) bool {
-            const self_x = @constCast(self);
-            while (self_x.next()) |item| {
-                if (!filter(item)) {
+            var self_copy = self.*;
+            while (self_copy.next()) |item| {
+                if (!function(item)) {
                     return false;
                 }
             }
@@ -72,54 +72,60 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
         }
 
         pub fn firstOrDefault(self: *const Self) ?TItem {
-            const self_x = @constCast(self);
-            return self_x.next() orelse null;
+            var self_copy = self.*;
+            return self_copy.next() orelse null;
         }
 
         pub fn lastOrDefault(self: *const Self) ?TItem {
-            const self_x = @constCast(self);
+            var self_copy = self.*;
             var last: ?TItem = null;
-            while (self_x.next()) |item| {
+            while (self_copy.next()) |item| {
                 last = item;
             }
             return last;
         }
 
-        pub fn elementAt(self: *const Self, index: usize) ?TItem {
-            const self_x = @constCast(self);
+        pub fn elementAt(
+            self: *const Self,
+            index: usize,
+        ) ?TItem {
+            var self_copy = self.*;
             var current_index: usize = 0;
-            while (current_index < index) {
-                _ = self_x.next();
+            while (current_index < index and self_copy.next() != null) {
                 current_index += 1;
             }
-            return self_x.next();
+            return self_copy.next();
         }
 
         pub inline fn where(
             self: *const Self,
-            comptime filter: fn (TItem) bool,
-        ) Iterator(TItem, WhereIterator(TItem, filter, TImpl)) {
-            const foo = @constCast(&self.impl);
-            return .{ .impl = WhereIterator(TItem, filter, TImpl){ .prev_iter = foo } };
+            comptime function: fn (TItem) bool,
+        ) Iterator(TItem, WhereIterator(TItem, function, TImpl)) {
+            var self_copy = self.*;
+            return .{ .impl = WhereIterator(TItem, function, TImpl){
+                .prev_iter = self_copy.impl,
+            } };
         }
 
         pub inline fn select(
             self: *const Self,
             comptime TDest: type,
-            comptime project: fn (TItem) TDest,
-        ) Iterator(TDest, SelectIterator(TItem, TDest, project, TImpl)) {
-            const foo = @constCast(&self.impl);
-            return .{ .impl = SelectIterator(TItem, TDest, project, TImpl){ .prev_iter = foo } };
+            comptime function: fn (TItem) TDest,
+        ) Iterator(TDest, SelectIterator(TItem, TDest, function, TImpl)) {
+            var self_copy = self.*;
+            return .{ .impl = SelectIterator(TItem, TDest, function, TImpl){
+                .prev_iter = self_copy.impl,
+            } };
         }
 
         pub inline fn selectMany(
             self: *const Self,
             comptime TDest: type,
-            comptime selectFn: fn (TItem) []const TDest,
-        ) Iterator(TDest, SelectManyIterator(TItem, TDest, selectFn, TImpl)) {
-            const foo = @constCast(&self.impl);
-            return .{ .impl = SelectManyIterator(TItem, TDest, selectFn, TImpl){
-                .prev_iter = foo,
+            comptime function: fn (TItem) []const TDest,
+        ) Iterator(TDest, SelectManyIterator(TItem, TDest, function, TImpl)) {
+            var self_copy = self.*;
+            return .{ .impl = SelectManyIterator(TItem, TDest, function, TImpl){
+                .prev_iter = self_copy.impl,
                 .slice_iter = null,
             } };
         }
@@ -128,9 +134,9 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             self: *const Self,
             comptime size: usize,
         ) Iterator([size]TItem, WindowIterator(TItem, size, TImpl)) {
-            const foo = @constCast(&self.impl);
+            var self_copy = self.*;
             return .{ .impl = WindowIterator(TItem, size, TImpl){
-                .prev_iter = foo,
+                .prev_iter = self_copy.impl,
                 .maybe_window = null,
             } };
         }
@@ -141,10 +147,10 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             comptime function: fn (TState, TItem) TState,
             initial_state: TState,
         ) Iterator(TState, ScanIterator(TItem, TState, function, TImpl)) {
-            const foo = @constCast(&self.impl);
+            var self_copy = self.*;
             return .{ .impl = ScanIterator(TItem, TState, function, TImpl){
                 .state = initial_state,
-                .prev_iter = foo,
+                .prev_iter = self_copy.impl,
             } };
         }
 
@@ -154,9 +160,9 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             comptime function: fn (TDest, TItem) TDest,
             seed: TDest,
         ) TDest {
-            const self_x = @constCast(&self.impl);
+            var self_copy = self.*;
             var result: TDest = seed;
-            while (self_x.next()) |item| {
+            while (self_copy.next()) |item| {
                 result = function(result, item);
             }
             return result;
@@ -166,8 +172,8 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             self: *const Self,
             needle: TItem,
         ) bool {
-            const self_x = @constCast(&self.impl);
-            while (self_x.next()) |item| {
+            var self_copy = self.*;
+            while (self_copy.next()) |item| {
                 if (item == needle) {
                     return true;
                 }
@@ -179,11 +185,11 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             self: *const Self,
             other_iter: anytype,
         ) bool {
-            const self_x = @constCast(&self.impl);
-            const other_x = @constCast(other_iter);
+            var self_copy = self.*;
+            // var other_copy = other_iter.*;
             while (true) {
-                var first_item = self_x.next();
-                var second_item = other_x.next();
+                var first_item = self_copy.next();
+                var second_item = other_iter.next();
 
                 if (first_item == null and second_item == null) {
                     return true;
@@ -199,9 +205,9 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             self: *const Self,
             needle: TItem,
         ) ?usize {
-            const self_x = @constCast(&self.impl);
+            var self_copy = self.*;
             var index: usize = 0;
-            while (self_x.next()) |item| {
+            while (self_copy.next()) |item| {
                 if (item == needle) {
                     return index;
                 }
@@ -213,9 +219,10 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
         pub inline fn concat(
             self: *const Self,
             other_iter: anytype,
-        ) Iterator(TItem, ConcatIterator(TItem, TImpl, @TypeOf(other_iter.*))) {
-            return .{ .impl = ConcatIterator(TItem, TImpl, @TypeOf(other_iter.*)){
-                .prev_iter = @constCast(&self.impl),
+        ) Iterator(TItem, ConcatIterator(TItem, TImpl, @TypeOf(other_iter))) {
+            var self_copy = self.*;
+            return .{ .impl = ConcatIterator(TItem, TImpl, @TypeOf(other_iter)){
+                .prev_iter = self_copy.impl,
                 .next_iter = other_iter,
             } };
         }
@@ -230,22 +237,22 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             self: *const Self,
             comptime TOtherItem: type,
             other_iter: anytype,
-        ) Iterator(struct { TItem, TOtherItem }, ZipIterator(TItem, TImpl, @TypeOf(other_iter.*), TOtherItem)) {
-            const foo = @constCast(&self.impl);
-            return .{ .impl = ZipIterator(TItem, TImpl, @TypeOf(other_iter.*), TOtherItem){
-                .prev_iter = foo,
+        ) Iterator(struct { TItem, TOtherItem }, ZipIterator(TItem, TImpl, @TypeOf(other_iter), TOtherItem)) {
+            var self_copy = self.*;
+            return .{ .impl = ZipIterator(TItem, TImpl, @TypeOf(other_iter), TOtherItem){
+                .prev_iter = self_copy.impl,
                 .other_iter = other_iter,
             } };
         }
 
         pub inline fn append(
             self: *const Self,
-            appended_item: TItem,
+            item: TItem,
         ) Iterator(TItem, AppendIterator(TItem, TImpl)) {
-            const foo = @constCast(&self.impl);
+            var self_copy = self.*;
             return .{ .impl = AppendIterator(TItem, TImpl){
-                .prev_iter = foo,
-                .appended_item = appended_item,
+                .prev_iter = self_copy.impl,
+                .appended_item = item,
             } };
         }
 
@@ -261,9 +268,9 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
         }
 
         pub inline fn peekable(self: *const Self) Iterator(TItem, PeekableIterator(TItem, TImpl)) {
-            const foo = @constCast(&self.impl);
+            var self_copy = self.*;
             return .{ .impl = PeekableIterator(TItem, TImpl){
-                .prev_iter = foo,
+                .prev_iter = self_copy.impl,
                 .peeked_item = null,
             } };
         }
@@ -272,9 +279,9 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             self: *const Self,
             item_count: usize,
         ) Iterator(TItem, TakeIterator(TItem, TImpl)) {
-            const self_x = @constCast(&self.impl);
+            var self_copy = self.*;
             return .{ .impl = TakeIterator(TItem, TImpl){
-                .prev_iter = self_x,
+                .prev_iter = self_copy.impl,
                 .index = 0,
                 .count = item_count,
             } };
@@ -284,20 +291,20 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             self: *const Self,
             every_nth: usize,
         ) Iterator(TItem, TakeEveryIterator(TItem, TImpl)) {
-            const self_x = @constCast(&self.impl);
+            var self_copy = self.*;
             return .{ .impl = TakeEveryIterator(TItem, TImpl){
-                .prev_iter = self_x,
+                .prev_iter = self_copy.impl,
                 .every_nth = every_nth,
             } };
         }
 
         pub inline fn takeWhile(
             self: *const Self,
-            comptime filter: fn (TItem) bool,
-        ) Iterator(TItem, TakeWhileIterator(TItem, filter, TImpl)) {
-            const self_x = @constCast(&self.impl);
-            return .{ .impl = TakeWhileIterator(TItem, filter, TImpl){
-                .prev_iter = self_x,
+            comptime function: fn (TItem) bool,
+        ) Iterator(TItem, TakeWhileIterator(TItem, function, TImpl)) {
+            var self_copy = self.*;
+            return .{ .impl = TakeWhileIterator(TItem, function, TImpl){
+                .prev_iter = self_copy.impl,
                 .completed = false,
             } };
         }
@@ -306,9 +313,9 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             self: *const Self,
             allocator: std.mem.Allocator,
         ) !std.ArrayList(TItem) {
-            const self_x = @constCast(&self.impl);
+            var self_copy = self.*;
             var array_list = std.ArrayList(TItem).init(allocator);
-            while (self_x.next()) |item| {
+            while (self_copy.next()) |item| {
                 try array_list.append(item);
             }
             return array_list;
@@ -318,9 +325,9 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             self: *const Self,
             item_count: usize,
         ) Iterator(TItem, SkipIterator(TItem, TImpl)) {
-            const self_x = @constCast(&self.impl);
+            var self_copy = self.*;
             return .{ .impl = SkipIterator(TItem, TImpl){
-                .prev_iter = self_x,
+                .prev_iter = self_copy.impl,
                 .index = 0,
                 .count = item_count,
             } };
@@ -328,40 +335,40 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
 
         pub inline fn skipWhile(
             self: *const Self,
-            comptime filter: fn (TItem) bool,
-        ) Iterator(TItem, SkipWhileIterator(TItem, filter, TImpl)) {
-            const self_x = @constCast(&self.impl);
-            return .{ .impl = SkipWhileIterator(TItem, filter, TImpl){
-                .prev_iter = self_x,
+            comptime function: fn (TItem) bool,
+        ) Iterator(TItem, SkipWhileIterator(TItem, function, TImpl)) {
+            var self_copy = self.*;
+            return .{ .impl = .{
+                .prev_iter = self_copy.impl,
                 .skipping_is_done = false,
             } };
         }
 
         pub inline fn forEach(
             self: *const Self,
-            action: *const fn (TItem) void,
+            function: *const fn (TItem) void,
         ) void {
-            const self_x = @constCast(self);
-            while (self_x.next()) |item| {
-                action(item);
+            var self_copy = self.*;
+            while (self_copy.next()) |item| {
+                function(item);
             }
         }
 
         pub inline fn inspect(
             self: *const Self,
-            action: *const fn (TItem) void,
+            function: *const fn (TItem) void,
         ) Iterator(TItem, TImpl) {
-            const self_x = @constCast(self);
-            while (self_x.next()) |item| {
-                action(item);
+            var self_copy = self.*;
+            while (self_copy.next()) |item| {
+                function(item);
             }
-            return self_x.*;
+            return self.*;
         }
 
         pub inline fn max(self: *const Self) ?TItem {
-            var self_x = @constCast(self);
+            var self_copy = self.*;
             var maybe_max_value: ?TItem = null;
-            while (self_x.next()) |item| {
+            while (self_copy.next()) |item| {
                 if (maybe_max_value == null or item > maybe_max_value.?) {
                     maybe_max_value = item;
                 }
@@ -372,13 +379,13 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
         pub inline fn maxBy(
             self: *const Self,
             comptime TBy: type,
-            comptime selector: fn (TItem) TBy,
+            comptime function: fn (TItem) TBy,
         ) ?TItem {
-            var self_x = @constCast(self);
+            var self_copy = self.*;
             var maybe_max_item: ?TItem = null;
             var maybe_max_value: ?TBy = null;
-            while (self_x.next()) |item| {
-                var current_value = selector(item);
+            while (self_copy.next()) |item| {
+                var current_value = function(item);
                 if (maybe_max_value == null or current_value > maybe_max_value.?) {
                     maybe_max_item = item;
                     maybe_max_value = current_value;
@@ -390,13 +397,13 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
         pub inline fn minBy(
             self: *const Self,
             comptime TBy: type,
-            comptime selector: fn (TItem) TBy,
+            comptime function: fn (TItem) TBy,
         ) ?TItem {
-            var self_x = @constCast(self);
+            var self_copy = self.*;
             var maybe_min_item: ?TItem = null;
             var maybe_min_value: ?TBy = null;
-            while (self_x.next()) |item| {
-                var current_value = selector(item);
+            while (self_copy.next()) |item| {
+                var current_value = function(item);
                 if (maybe_min_value == null or current_value < maybe_min_value.?) {
                     maybe_min_item = item;
                     maybe_min_value = current_value;
@@ -406,9 +413,9 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
         }
 
         pub inline fn min(self: *const Self) ?TItem {
-            var self_x = @constCast(self);
+            var self_copy = self.*;
             var maybe_min_value: ?TItem = null;
-            while (self_x.next()) |item| {
+            while (self_copy.next()) |item| {
                 if (maybe_min_value == null or item < maybe_min_value.?) {
                     maybe_min_value = item;
                 }
@@ -417,9 +424,9 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
         }
 
         pub inline fn isSortedAscending(self: *const Self) bool {
-            var self_x = @constCast(self);
+            var self_copy = self.*;
             var maybe_previous: ?TItem = null;
-            while (self_x.next()) |item| {
+            while (self_copy.next()) |item| {
                 if (maybe_previous) |previous| {
                     if (previous > item) {
                         return false;
@@ -431,9 +438,9 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
         }
 
         pub inline fn isSortedDescending(self: *const Self) bool {
-            var self_x = @constCast(self);
+            var self_copy = self.*;
             var maybe_previous: ?TItem = null;
-            while (self_x.next()) |item| {
+            while (self_copy.next()) |item| {
                 if (maybe_previous) |previous| {
                     if (previous < item) {
                         return false;
@@ -447,12 +454,12 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
         pub inline fn isSortedAscendingBy(
             self: *const Self,
             comptime TBy: type,
-            comptime selector: fn (TItem) TBy,
+            comptime function: fn (TItem) TBy,
         ) bool {
-            var self_x = @constCast(self);
+            var self_copy = self.*;
             var maybe_previous_value: ?TBy = null;
-            while (self_x.next()) |current_item| {
-                var current_value = selector(current_item);
+            while (self_copy.next()) |current_item| {
+                var current_value = function(current_item);
                 if (maybe_previous_value) |previous_value| {
                     if (previous_value > current_value) {
                         return false;
@@ -466,12 +473,12 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
         pub inline fn isSortedDescendingBy(
             self: *const Self,
             comptime TBy: type,
-            comptime selector: fn (TItem) TBy,
+            comptime function: fn (TItem) TBy,
         ) bool {
-            var self_x = @constCast(self);
+            var self_copy = self.*;
             var maybe_previous_value: ?TBy = null;
-            while (self_x.next()) |current_item| {
-                var current_value = selector(current_item);
+            while (self_copy.next()) |current_item| {
+                var current_value = function(current_item);
                 if (maybe_previous_value) |previous_value| {
                     if (previous_value < current_value) {
                         return false;
@@ -482,9 +489,7 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             return true;
         }
 
-        pub inline fn reverse(
-            self: *const Self,
-        ) Iterator(TItem, SliceIterator(TItem)) {
+        pub inline fn reverse(self: *const Self) Iterator(TItem, SliceIterator(TItem)) {
             if (@hasDecl(TImpl, "reverse")) {
                 var self_impl = self.impl;
                 return .{ .impl = self_impl.reverse() };
@@ -494,10 +499,10 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
         }
 
         pub inline fn average(self: *const Self) TItem {
-            var self_x = @constCast(self);
+            var self_copy = self.*;
             var total_sum: TItem = 0;
             var total_count: usize = 0;
-            while (self_x.next()) |item| {
+            while (self_copy.next()) |item| {
                 total_sum += item;
                 total_count += 1;
             }
@@ -516,10 +521,10 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
         }
 
         pub inline fn averageTrunc(self: *const Self) TItem {
-            var self_x = @constCast(self);
+            var self_copy = self.*;
             var total_sum: TItem = 0;
             var total_count: usize = 0;
-            while (self_x.next()) |item| {
+            while (self_copy.next()) |item| {
                 total_sum += item;
                 total_count += 1;
             }
@@ -532,10 +537,10 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
         }
 
         pub inline fn averageFloor(self: *const Self) TItem {
-            var self_x = @constCast(self);
+            var self_copy = self.*;
             var total_sum: TItem = 0;
             var total_count: usize = 0;
-            while (self_x.next()) |item| {
+            while (self_copy.next()) |item| {
                 total_sum += item;
                 total_count += 1;
             }
@@ -550,13 +555,13 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
         pub inline fn averageBy(
             self: *const Self,
             comptime TBy: type,
-            comptime selector: fn (TItem) TBy,
+            comptime function: fn (TItem) TBy,
         ) TBy {
-            var self_x = @constCast(self);
+            var self_copy = self.*;
             var total_sum: TBy = 0;
             var total_count: usize = 0;
-            while (self_x.next()) |item| {
-                const item_value = selector(item);
+            while (self_copy.next()) |item| {
+                const item_value = function(item);
                 total_sum += item_value;
                 total_count += 1;
             }
@@ -577,13 +582,13 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
         pub inline fn averageTruncBy(
             self: *const Self,
             comptime TBy: type,
-            comptime selector: fn (TItem) TBy,
+            comptime function: fn (TItem) TBy,
         ) TBy {
-            var self_x = @constCast(self);
+            var self_copy = self.*;
             var total_sum: TBy = 0;
             var total_count: usize = 0;
-            while (self_x.next()) |item| {
-                const item_value = selector(item);
+            while (self_copy.next()) |item| {
+                const item_value = function(item);
                 total_sum += item_value;
                 total_count += 1;
             }
@@ -598,13 +603,13 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
         pub inline fn averageFloorBy(
             self: *const Self,
             comptime TBy: type,
-            comptime selector: fn (TItem) TBy,
+            comptime function: fn (TItem) TBy,
         ) TBy {
-            var self_x = @constCast(self);
+            var self_copy = self.*;
             var total_sum: TBy = 0;
             var total_count: usize = 0;
-            while (self_x.next()) |item| {
-                const item_value = selector(item);
+            while (self_copy.next()) |item| {
+                const item_value = function(item);
                 total_sum += item_value;
                 total_count += 1;
             }
@@ -649,6 +654,21 @@ test ".count()" {
 
 fn even(number: u8) bool {
     return @rem(number, 2) == 0;
+}
+
+test "chained example" {
+    const input = "Number 1 and 2, then goes 3 and last one 4 is excluded.";
+    const result = from.slice(u8, input).where(std.ascii.isDigit).take(3).intersperse('+');
+    try expectEqualIter(u8, "1+2+3", result);
+}
+
+test "chained-not example" {
+    const input = "Number 1 and 2, then goes 3 and last one 4 is excluded.";
+    var a = from.slice(u8, input);
+    var b = a.where(std.ascii.isDigit);
+    var c = b.take(3);
+    var d = c.intersperse('+');
+    try expectEqualIter(u8, "1+2+3", d);
 }
 
 test ".where()" {

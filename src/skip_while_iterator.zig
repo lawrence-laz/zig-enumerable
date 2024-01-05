@@ -6,7 +6,7 @@ pub fn SkipWhileIterator(
     return struct {
         const Self = @This();
 
-        prev_iter: *TPrevIter,
+        prev_iter: TPrevIter,
         skipping_is_done: bool,
 
         pub fn next(self: *Self) ?TItem {

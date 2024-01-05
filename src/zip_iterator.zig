@@ -9,8 +9,8 @@ pub fn ZipIterator(
     return struct {
         const Self = @This();
 
-        prev_iter: *TPrevIter,
-        other_iter: *TOtherIter,
+        prev_iter: TPrevIter,
+        other_iter: TOtherIter,
 
         pub fn next(self: *Self) ?struct { TItem, TOtherItem } {
             if (self.prev_iter.next()) |first_item| {

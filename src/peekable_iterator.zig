@@ -7,7 +7,7 @@ pub fn PeekableIterator(
     return struct {
         const Self = @This();
 
-        prev_iter: *TPrevIter,
+        prev_iter: TPrevIter,
         peeked_item: ??TItem,
 
         pub fn next(self: *Self) ?TItem {

@@ -8,7 +8,7 @@ pub fn WhereIterator(
     return struct {
         const Self = @This();
 
-        prev_iter: *TPrevIter,
+        prev_iter: TPrevIter,
 
         pub fn next(self: *Self) ?TItem {
             while (self.prev_iter.next()) |item| {

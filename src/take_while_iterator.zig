@@ -6,7 +6,7 @@ pub fn TakeWhileIterator(
     return struct {
         const Self = @This();
 
-        prev_iter: *TPrevIter,
+        prev_iter: TPrevIter,
         completed: bool,
 
         pub fn next(self: *Self) ?TItem {

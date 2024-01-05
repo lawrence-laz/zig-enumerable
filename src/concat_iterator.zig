@@ -8,8 +8,8 @@ pub fn ConcatIterator(
     return struct {
         const Self = @This();
 
-        prev_iter: *TPrevIter,
-        next_iter: *TNextIter,
+        prev_iter: TPrevIter,
+        next_iter: TNextIter,
 
         pub fn next(self: *Self) ?TItem {
             return self.prev_iter.next() orelse self.next_iter.next() orelse null;

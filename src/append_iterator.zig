@@ -7,7 +7,7 @@ pub fn AppendIterator(
     return struct {
         const Self = @This();
 
-        prev_iter: *TPrevIter,
+        prev_iter: TPrevIter,
         appended_item: ?TItem,
 
         pub fn next(self: *Self) ?TItem {

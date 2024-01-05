@@ -11,7 +11,7 @@ pub fn SelectManyIterator(
     return struct {
         const Self = @This();
 
-        prev_iter: *TPrevIter,
+        prev_iter: TPrevIter,
         slice_iter: ?Iterator(TDest, SliceIterator(TDest)),
 
         pub fn next(self: *Self) ?TDest {

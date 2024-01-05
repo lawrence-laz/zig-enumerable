@@ -5,7 +5,7 @@ pub fn TakeIterator(
     return struct {
         const Self = @This();
 
-        prev_iter: *TPrevIter,
+        prev_iter: TPrevIter,
         count: usize,
         index: usize,
 

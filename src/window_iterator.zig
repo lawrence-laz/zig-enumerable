@@ -8,7 +8,7 @@ pub fn WindowIterator(
     return struct {
         const Self = @This();
 
-        prev_iter: *TPrevIter,
+        prev_iter: TPrevIter,
         maybe_window: ?[window_size]TItem,
 
         pub fn next(self: *Self) ?[window_size]TItem {

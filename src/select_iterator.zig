@@ -9,7 +9,7 @@ pub fn SelectIterator(
     return struct {
         const Self = @This();
 
-        prev_iter: *TPrevIter,
+        prev_iter: TPrevIter,
 
         pub fn next(self: *Self) ?TDest {
             while (self.prev_iter.next()) |item| {

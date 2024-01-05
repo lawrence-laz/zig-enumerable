@@ -7,7 +7,7 @@ pub fn ScanIterator(
     return struct {
         const Self = @This();
 
-        prev_iter: *TPrevIter,
+        prev_iter: TPrevIter,
         state: TState,
 
         pub fn next(self: *Self) ?TState {
