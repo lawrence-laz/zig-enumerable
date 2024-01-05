@@ -12,8 +12,8 @@ pub inline fn tokenIterator(comptime TItem: type, token_iterator: anytype) Itera
     return .{ .impl = token_iterator };
 }
 
-pub inline fn slice(comptime TItem: type, sliceArg: []const TItem) Iterator(TItem, SliceIterator(TItem)) {
-    return .{ .impl = SliceIterator(TItem){ .slice = sliceArg } };
+pub inline fn slice(sliceArg: anytype) Iterator(std.meta.Elem(@TypeOf(sliceArg)), SliceIterator(std.meta.Elem(@TypeOf(sliceArg)))) {
+    return .{ .impl = .{ .slice = sliceArg } };
 }
 
 pub inline fn range(

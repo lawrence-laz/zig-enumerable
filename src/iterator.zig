@@ -627,29 +627,21 @@ fn printItem(item: u8) void {
     std.debug.print("\n Item: {}", .{item});
 }
 
-test ".forEach()" {
-    var input = &[_]u8{ 1, 2, 3, 4, 5 };
-    var iter = from.slice(u8, input);
+test "forEach" {
+    var iter = from.slice(&[_]u8{ 1, 2, 3, 4, 5 });
     iter.forEach(printItem);
 }
 
-test ".inspect()" {
-    var input = &[_]u8{ 1, 2, 3, 4, 5 };
-    var iter = from.slice(u8, input);
+test "inspect" {
+    var iter = from.slice(&[_]u8{ 1, 2, 3, 4, 5 });
     _ = iter.inspect(printItem);
 }
 
-test ".count()" {
-    // Arrange
-    const text = "foo\nbar\nbaz\n";
-    var lines_iter = std.mem.tokenizeSequence(u8, text, "\n");
-    const expected: usize = 3;
-
-    // Act
-    var actual = from.tokenIterator([]const u8, &lines_iter).count();
-
-    // Assert
-    try std.testing.expectEqual(expected, actual);
+test "count" {
+    var lines_iter = std.mem.tokenizeSequence(u8, "foo\nbar\nbaz\n", "\n");
+    var iter = from.tokenIterator([]const u8, &lines_iter);
+    var actual = iter.count();
+    try std.testing.expectEqual(@as(usize, 3), actual);
 }
 
 fn even(number: u8) bool {
@@ -658,64 +650,32 @@ fn even(number: u8) bool {
 
 test "chained example" {
     const input = "Number 1 and 2, then goes 3 and last one 4 is excluded.";
-    const result = from.slice(u8, input).where(std.ascii.isDigit).take(3).intersperse('+');
+    const result = from.slice(input).where(std.ascii.isDigit).take(3).intersperse('+');
     try expectEqualIter(u8, "1+2+3", result);
 }
 
-test "chained-not example" {
-    const input = "Number 1 and 2, then goes 3 and last one 4 is excluded.";
-    var a = from.slice(u8, input);
-    var b = a.where(std.ascii.isDigit);
-    var c = b.take(3);
-    var d = c.intersperse('+');
-    try expectEqualIter(u8, "1+2+3", d);
-}
-
-test ".where()" {
-    // Arrange
-    const numbers = &[_]u8{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-    var iterator = from.slice(u8, numbers);
-
-    // Act
-    var actual = iterator.where(even);
-
-    // Assert
-    const expected = &[_]u8{ 2, 4, 6, 8, 10 };
-    var index: usize = 0;
-    while (actual.next()) |actual_number| {
-        try std.testing.expectEqual(expected[index], actual_number);
-        index += 1;
-    }
+test "where" {
+    var iter = from.slice(&[_]u8{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
+    var actual = iter.where(even);
+    try expectEqualIter(u8, &.{ 2, 4, 6, 8, 10 }, actual);
 }
 
 fn negative(number: u8) i8 {
     return @as(i8, @intCast(number)) * -1;
 }
 
-test ".select()" {
-    // Arrange
-    const numbers = &[_]u8{ 1, 2, 3 };
-    var iterator = from.slice(u8, numbers);
-
-    // Act
-    var actual = iterator.select(i8, negative);
-
-    // Assert
-    const expected = &[_]i8{ -1, -2, -3 };
-    var index: usize = 0;
-    while (actual.next()) |actual_number| {
-        try std.testing.expectEqual(expected[index], actual_number);
-        index += 1;
-    }
+test "select" {
+    var iter = from.slice(&[_]u8{ 1, 2, 3 });
+    var actual = iter.select(i8, negative);
+    try expectEqualIter(i8, &.{ -1, -2, -3 }, actual);
 }
 
 const Foo = struct { numbers: []const u8 };
 fn getNumbers(foo: Foo) []const u8 {
     return foo.numbers;
 }
-test ".selectMany()" {
-    // Arrange
-    const input = &.{
+test "selectMany" {
+    var iterator = from.slice(&[_]Foo{
         .{ .numbers = &.{} },
         .{ .numbers = &.{ 1, 2 } },
         .{ .numbers = &.{} },
@@ -724,394 +684,185 @@ test ".selectMany()" {
         .{ .numbers = &.{ 4, 5 } },
         .{ .numbers = &.{ 6, 7 } },
         .{ .numbers = &.{} },
-    };
-    var iterator = from.slice(Foo, input);
-
-    // Act
+    });
     var actual = iterator.selectMany(u8, getNumbers);
-
-    // Assert
-    const expected = &.{ 1, 2, 3, 4, 5, 6, 7 };
-    try expectEqualIter(u8, expected, actual);
+    try expectEqualIter(u8, &.{ 1, 2, 3, 4, 5, 6, 7 }, actual);
 }
 
-test ".sum()" {
-    // Arrange
-    const numbers = &[_]u8{ 1, 2, 3 };
-    var iterator = from.slice(u8, numbers);
-
-    // Act
+test "sum" {
+    var iterator = from.slice(&[_]u8{ 1, 2, 3 });
     var actual = iterator.sum();
-
-    // Assert
-    const expected: u8 = 6;
-    try std.testing.expectEqual(expected, actual);
+    try std.testing.expectEqual(@as(u8, 6), actual);
 }
 
-test ".any()" {
-    // Arrange
-    const numbers = &[_]u8{ 1, 2, 3 };
-    var iterator = from.slice(u8, numbers);
-
-    // Act
+test "any" {
+    var iterator = from.slice(&[_]u8{ 1, 2, 3 });
     const actual = iterator.any(even);
-
-    // Assert
     try std.testing.expectEqual(true, actual);
 }
 
-test ".all(...)" {
+test "all" {
     {
-        const numbers = &[_]u8{ 2, 4, 6 };
-        var iterator = from.slice(u8, numbers);
+        var iterator = from.slice(&[_]u8{ 2, 4, 6 });
         const actual = iterator.all(even);
         try std.testing.expectEqual(true, actual);
     }
     {
-        const numbers = &[_]u8{ 2, 3, 6 };
-        var iterator = from.slice(u8, numbers);
+        var iterator = from.slice(&[_]u8{ 2, 3, 6 });
         const actual = iterator.all(even);
         try std.testing.expectEqual(false, actual);
     }
     {
-        const numbers = &[_]u8{};
-        var iterator = from.slice(u8, numbers);
+        var iterator = from.slice(&[_]u8{});
         const actual = iterator.all(even);
         try std.testing.expectEqual(true, actual);
     }
 }
 
-test ".firstOrDefault() when null" {
-    // Arrange
-    const numbers = &[_]u8{};
-    var iterator = from.slice(u8, numbers);
-
-    // Act
-    const actual = iterator.firstOrDefault();
-
-    // Assert
-    const expected: ?u8 = null;
-    try std.testing.expectEqual(expected, actual);
+test "firstOrDefault" {
+    {
+        var iterator = from.slice(&[_]u8{});
+        const actual = iterator.firstOrDefault();
+        try std.testing.expectEqual(@as(?u8, null), actual);
+    }
+    {
+        var iterator = from.slice(&[_]u8{ 1, 2, 3 });
+        const actual = iterator.firstOrDefault();
+        try std.testing.expectEqual(@as(?u8, 1), actual);
+    }
 }
 
-test ".firstOrDefault() when not null" {
-    // Arrange
-    const numbers = &[_]u8{ 1, 2, 3 };
-    var iterator = from.slice(u8, numbers);
-
-    // Act
-    const actual = iterator.firstOrDefault();
-
-    // Assert
-    const expected: ?u8 = 1;
-    try std.testing.expectEqual(expected, actual);
+test "lastOrDefault" {
+    {
+        var iterator = from.slice(&[_]u8{});
+        const actual = iterator.lastOrDefault();
+        try std.testing.expectEqual(@as(?u8, null), actual);
+    }
+    {
+        var iterator = from.slice(&[_]u8{ 1, 2, 3 });
+        const actual = iterator.lastOrDefault();
+        try std.testing.expectEqual(@as(?u8, 3), actual);
+    }
 }
 
-test ".lastOrDefault() when null" {
-    // Arrange
-    const numbers = &[_]u8{};
-    var iterator = from.slice(u8, numbers);
-
-    // Act
-    const actual = iterator.lastOrDefault();
-
-    // Assert
-    const expected: ?u8 = null;
-    try std.testing.expectEqual(expected, actual);
+test "elementAt" {
+    {
+        var iterator = from.slice(&[_]u8{});
+        const actual = iterator.elementAt(5);
+        try std.testing.expectEqual(@as(?u8, null), actual);
+    }
+    {
+        var iterator = from.slice(&[_]u8{ 1, 2, 3 });
+        const actual = iterator.elementAt(2);
+        try std.testing.expectEqual(@as(?u8, 3), actual);
+    }
 }
 
-test ".lastOrDefault() when not null" {
-    // Arrange
-    const numbers = &[_]u8{ 1, 2, 3 };
-    var iterator = from.slice(u8, numbers);
-
-    // Act
-    const actual = iterator.lastOrDefault();
-
-    // Assert
-    const expected: ?u8 = 3;
-    try std.testing.expectEqual(expected, actual);
-}
-
-test ".elementAt() when out of range" {
-    // Arrange
-    const numbers = &[_]u8{};
-    var iterator = from.slice(u8, numbers);
-
-    // Act
-    const actual = iterator.elementAt(5);
-
-    // Assert
-    const expected: ?u8 = null;
-    try std.testing.expectEqual(expected, actual);
-}
-
-test ".elementAt() when not null" {
-    // Arrange
-    const numbers = &[_]u8{ 1, 2, 3 };
-    var iterator = from.slice(u8, numbers);
-
-    // Act
-    const actual = iterator.elementAt(2);
-
-    // Assert
-    const expected: ?u8 = 3;
-    try std.testing.expectEqual(expected, actual);
-}
-
-test ".concat()" {
-    // Arrange
-    const first_slice = &[_]u8{ 1, 2, 3 };
-    const second_slice = &[_]u8{ 4, 5, 6 };
-    var first_iter = from.slice(u8, first_slice);
-    var second_iter = from.slice(u8, second_slice);
-
-    // Act
+test "concat" {
+    var first_iter = from.slice(&[_]u8{ 1, 2, 3 });
+    var second_iter = from.slice(&[_]u8{ 4, 5, 6 });
     var actual = first_iter.concat(&second_iter);
-
-    // Assert
-    const expected = &[_]u8{ 1, 2, 3, 4, 5, 6 };
-    var index: usize = 0;
-    while (actual.next()) |actual_number| {
-        try std.testing.expectEqual(expected[index], actual_number);
-        index += 1;
-    }
-    try std.testing.expectEqual(@as(usize, 6), index);
+    try expectEqualIter(u8, &.{ 1, 2, 3, 4, 5, 6 }, actual);
 }
 
-test ".zip()" {
-    // Arrange
-    const first_slice = &[_]u8{ 1, 2, 3 };
-    const second_slice = &[_]u8{ 4, 5, 6 };
-    var first_iter = from.slice(u8, first_slice);
-    var second_iter = from.slice(u8, second_slice);
-
-    // Act
+test "zip" {
+    var first_iter = from.slice(&[_]u8{ 1, 2, 3 });
+    var second_iter = from.slice(&[_]u8{ 4, 5, 6 });
     var actual = first_iter.zip(u8, &second_iter);
-
-    // Assert
-    const Tuple = struct { u8, u8 };
-    const expected = &[_]Tuple{ .{ 1, 4 }, .{ 2, 5 }, .{ 3, 6 } };
-    try expectEqualIter(Tuple, expected, actual);
+    try expectEqualIter(struct { u8, u8 }, &.{ .{ 1, 4 }, .{ 2, 5 }, .{ 3, 6 } }, actual);
 }
 
-test ".append()" {
-    // Arrange
-    const slice = &[_]u8{ 1, 2, 3 };
-    const appended_item: u8 = 4;
-    var iter = from.slice(u8, slice);
-
-    // Act
-    var actual = iter.append(appended_item);
-
+test "append" {
+    var iter = from.slice(&[_]u8{ 1, 2, 3 });
+    var actual = iter.append(4);
     // Assert
-    const expected = &[_]u8{ 1, 2, 3, 4 };
-    var index: usize = 0;
-    while (actual.next()) |actual_number| {
-        try std.testing.expectEqual(expected[index], actual_number);
-        index += 1;
+    try expectEqualIter(u8, &.{ 1, 2, 3, 4 }, actual);
+}
+
+test "take" {
+    {
+        var iter = from.slice(&[_]u8{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
+        var actual = iter.take(3);
+        try expectEqualIter(u8, &.{ 1, 2, 3 }, actual);
     }
-    try std.testing.expectEqual(@as(usize, 4), index);
-}
-
-test ".take() when iter is long enough, stops at `item_count`" {
-    // Arrange
-    const numbers = &[_]u8{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-    var iter = from.slice(u8, numbers);
-
-    // Act
-    var actual = iter.take(3);
-
-    // Assert
-    const expected = &[_]u8{ 1, 2, 3 };
-    var index: usize = 0;
-    while (actual.next()) |actual_number| {
-        try std.testing.expectEqual(expected[index], actual_number);
-        index += 1;
+    {
+        var iter = from.slice(&[_]u8{ 1, 2 });
+        var actual = iter.take(3);
+        try expectEqualIter(u8, &.{ 1, 2 }, actual);
+        try expectEqualIter(u8, &.{ 1, 2 }, actual);
     }
-    try std.testing.expectEqual(@as(usize, 3), index);
 }
 
-test ".take() when iter is too short, stops at end" {
-    // Arrange
-    const numbers = &[_]u8{ 1, 2 };
-    var iter = from.slice(u8, numbers);
-
-    // Act
-    var actual = iter.take(3);
-
-    // Assert
-    const expected = &[_]u8{ 1, 2 };
-    var index: usize = 0;
-    while (actual.next()) |actual_number| {
-        try std.testing.expectEqual(expected[index], actual_number);
-        index += 1;
-    }
-    try std.testing.expectEqual(@as(usize, 2), index);
-}
-
-test ".takeEvery() when no remainder" {
-    // Arrange
-    const numbers = &[_]u8{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-    var iter = from.slice(u8, numbers);
-
-    // Act
+test "takeEvery" {
+    var iter = from.slice(&[_]u8{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
     var actual = iter.takeEvery(2);
+    try expectEqualIter(u8, &.{ 2, 4, 6, 8, 10 }, actual);
+}
 
-    // Assert
-    const expected = &[_]u8{ 2, 4, 6, 8, 10 };
-    var index: usize = 0;
-    while (actual.next()) |actual_number| {
-        try std.testing.expectEqual(expected[index], actual_number);
-        index += 1;
+test "takeWhile" {
+    {
+        var iter = from.slice(&[_]u8{ 2, 4, 6, 7, 8, 9, 10 });
+        var actual = iter.takeWhile(even);
+        try expectEqualIter(u8, &.{ 2, 4, 6 }, actual);
     }
-    try std.testing.expectEqual(@as(usize, 5), index);
-}
-
-test ".takeWhile() stop in the middle" {
-    // Arrange
-    const numbers = &[_]u8{ 2, 4, 6, 7, 8, 9, 10 };
-    var iter = from.slice(u8, numbers);
-
-    // Act
-    var actual = iter.takeWhile(even);
-
-    // Assert
-    const expected = &[_]u8{ 2, 4, 6 };
-    var index: usize = 0;
-    while (actual.next()) |actual_number| {
-        try std.testing.expectEqual(expected[index], actual_number);
-        index += 1;
+    {
+        var iter = from.slice(&[_]u8{ 2, 4, 6, 8, 10 });
+        var actual = iter.takeWhile(even);
+        try expectEqualIter(u8, &.{ 2, 4, 6, 8, 10 }, actual);
     }
-    try std.testing.expectEqual(@as(usize, 3), index);
-}
-
-test ".takeWhile() stop at the end" {
-    // Arrange
-    const numbers = &[_]u8{ 2, 4, 6, 8, 10 };
-    var iter = from.slice(u8, numbers);
-
-    // Act
-    var actual = iter.takeWhile(even);
-
-    // Assert
-    const expected = &[_]u8{ 2, 4, 6, 8, 10 };
-    var index: usize = 0;
-    while (actual.next()) |actual_number| {
-        try std.testing.expectEqual(expected[index], actual_number);
-        index += 1;
+    {
+        var iter = from.slice(&[_]u8{ 1, 2, 3, 4, 5 });
+        var actual = iter.takeWhile(even);
+        try expectEqualIter(u8, &[_]u8{}, actual);
     }
-    try std.testing.expectEqual(@as(usize, 5), index);
 }
 
-test ".takeWhile() stop immediately" {
-    // Arrange
-    const numbers = &[_]u8{ 1, 2, 3, 4, 5 };
-    var iter = from.slice(u8, numbers);
-
-    // Act
-    var actual = iter.takeWhile(even);
-
-    // Assert
-    const expected: ?u8 = null;
-    try std.testing.expectEqual(expected, actual.next());
-}
-
-test ".skip() when iter is long enough, takes after `item_count`" {
-    // Arrange
-    const numbers = &[_]u8{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-    var iter = from.slice(u8, numbers);
-
-    // Act
-    var actual = iter.skip(3);
-
-    // Assert
-    const expected = &[_]u8{ 4, 5, 6, 7, 8, 9, 10 };
-    var index: usize = 0;
-    while (actual.next()) |actual_number| {
-        try std.testing.expectEqual(expected[index], actual_number);
-        index += 1;
+test "skip" {
+    {
+        var iter = from.slice(&[_]u8{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
+        var actual = iter.skip(3);
+        try expectEqualIter(u8, &.{ 4, 5, 6, 7, 8, 9, 10 }, actual);
     }
-    try std.testing.expectEqual(@as(usize, 7), index);
-}
-
-test ".skip() when iter is too short, takes empty" {
-    // Arrange
-    const numbers = &[_]u8{ 1, 2 };
-    var iter = from.slice(u8, numbers);
-
-    // Act
-    var actual = iter.skip(3);
-
-    // Assert
-    const expected: ?u8 = null;
-    try std.testing.expectEqual(expected, actual.next());
-}
-
-test ".skipWhile() stop in the middle" {
-    // Arrange
-    const numbers = &[_]u8{ 2, 4, 6, 7, 8, 9, 10 };
-    var iter = from.slice(u8, numbers);
-
-    // Act
-    var actual = iter.skipWhile(even);
-
-    // Assert
-    var expected = &[_]u8{ 7, 8, 9, 10 };
-    try expectEqualIter(u8, expected, actual);
-}
-
-test ".skipWhile() stop at the end" {
-    // Arrange
-    const numbers = &[_]u8{ 2, 4, 6, 8, 10 };
-    var iter = from.slice(u8, numbers);
-
-    // Act
-    var actual = iter.skipWhile(even);
-
-    // Assert
-    const expected = &[_]u8{};
-    try expectEqualIter(u8, expected, actual);
-}
-
-test ".skipWhile() stop immediately" {
-    // Arrange
-    const numbers = &[_]u8{ 1, 2, 3, 4, 5 };
-    var iter = from.slice(u8, numbers);
-
-    // Act
-    var actual = iter.skipWhile(even);
-
-    // Assert
-    const expected = &[_]u8{ 1, 2, 3, 4, 5 };
-    try expectEqualIter(u8, expected, actual);
-}
-
-test "double optional?" {
-    var items = &[_]?i32{ 1, null, 3, 4, null };
-    var iter = from.slice(?i32, items);
-    var index: usize = 0;
-    while (iter.next()) |item| {
-        try std.testing.expectEqual(items[index], item);
-        index += 1;
+    {
+        var iter = from.slice(&[_]u8{ 1, 2 });
+        var actual = iter.skip(3);
+        try std.testing.expectEqual(@as(?u8, null), actual.next());
     }
-    try std.testing.expectEqual(@as(usize, 5), index);
 }
 
-test ".intersperse(...)" {
-    var input = &[_]u8{ 1, 2, 3, 4, 5 };
-    var iter = from.slice(u8, input);
-    var actual = iter.intersperse(9);
-    var expected = &[_]u8{ 1, 9, 2, 9, 3, 9, 4, 9, 5 };
-    try expectEqualIter(u8, expected, actual);
+test "skipWhile" {
+    {
+        var iter = from.slice(&[_]u8{ 2, 4, 6, 7, 8, 9, 10 });
+        var actual = iter.skipWhile(even);
+        try expectEqualIter(u8, &.{ 7, 8, 9, 10 }, actual);
+    }
+    {
+        var iter = from.slice(&[_]u8{ 2, 4, 6, 8, 10 });
+        var actual = iter.skipWhile(even);
+        try expectEqualIter(u8, &[_]u8{}, actual);
+    }
+    {
+        var iter = from.slice(&[_]u8{ 1, 2, 3, 4, 5 });
+        var actual = iter.skipWhile(even);
+        try expectEqualIter(u8, &.{ 1, 2, 3, 4, 5 }, actual);
+    }
 }
 
-test ".max()" {
-    var input = &[_]u8{ 1, 2, 3, 4, 5 };
-    var iter = from.slice(u8, input);
+test "optionals" {
+    var iter = from.slice(&[_]?i32{ 1, null, 3, 4, null });
+    try expectEqualIter(?i32, &[_]?i32{ 1, null, 3, 4, null }, iter);
+}
+
+test "intersperse" {
+    var iter = from.slice("abcd");
+    var actual = iter.intersperse('_');
+    try expectEqualIter(u8, "a_b_c_d", actual);
+}
+
+test "max" {
+    var iter = from.slice(&[_]u8{ 1, 2, 3, 4, 5 });
     var actual = iter.max();
-    var expected: ?u8 = 5;
-    try std.testing.expectEqual(expected, actual);
+    try std.testing.expectEqual(@as(?u8, 5), actual);
 }
 
 const Person = struct {
@@ -1123,217 +874,187 @@ fn age(person: Person) u8 {
     return person.age;
 }
 
-test ".maxBy()" {
-    var input = &[_]Person{
+test "maxBy" {
+    var iter = from.slice(&[_]Person{
         .{ .name = "Marry", .age = 1 },     .{ .name = "Dave", .age = 2 },
         .{ .name = "Gerthrude", .age = 3 }, .{ .name = "Casper", .age = 4 },
         .{ .name = "John", .age = 5 },
-    };
-    var iter = from.slice(Person, input);
+    });
     var actual = iter.maxBy(u8, age);
-    var expected: ?Person = .{ .name = "John", .age = 5 };
-    try std.testing.expectEqual(expected, actual);
+    try std.testing.expectEqual(Person{ .name = "John", .age = 5 }, actual.?);
 }
 
-test ".minBy()" {
-    var input = &[_]Person{
+test "minBy" {
+    var iter = from.slice(&[_]Person{
         .{ .name = "Gerthrude", .age = 3 }, .{ .name = "Casper", .age = 4 },
         .{ .name = "Marry", .age = 1 },     .{ .name = "Dave", .age = 2 },
         .{ .name = "John", .age = 5 },
-    };
-    var iter = from.slice(Person, input);
+    });
     var actual = iter.minBy(u8, age);
-    var expected: ?Person = .{ .name = "Marry", .age = 1 };
-    try std.testing.expectEqual(expected, actual);
+    try std.testing.expectEqual(Person{ .name = "Marry", .age = 1 }, actual.?);
 }
 
-test ".min()" {
-    var input = &[_]u8{ 3, 4, 2, 1, 5 };
-    var iter = from.slice(u8, input);
+test "min" {
+    var iter = from.slice(&[_]u8{ 3, 4, 2, 1, 5 });
     var actual = iter.min();
-    var expected: ?u8 = 1;
-    try std.testing.expectEqual(expected, actual);
+    try std.testing.expectEqual(@as(u8, 1), actual.?);
 }
 
 fn add(a: u8, b: u8) u8 {
     return a + b;
 }
 
-test ".scan(...)" {
-    var input = &[_]u8{ 1, 2, 3, 4, 5 };
-    var iter = from.slice(u8, input);
+test "scan" {
+    var iter = from.slice(&[_]u8{ 1, 2, 3, 4, 5 });
     var actual = iter.scan(u8, add, 0);
-    var expected = &[_]u8{ 1, 3, 6, 10, 15 };
-    try expectEqualIter(u8, expected, actual);
+    try expectEqualIter(u8, &[_]u8{ 1, 3, 6, 10, 15 }, actual);
 }
 
-test ".aggregate(...)" {
-    var input = &[_]u8{ 1, 2, 3, 4, 5 };
-    var iter = from.slice(u8, input);
+test "aggregate" {
+    var iter = from.slice(&[_]u8{ 1, 2, 3, 4, 5 });
     var actual = iter.aggregate(u8, add, 0);
-    var expected: u8 = 15;
-    try std.testing.expectEqual(expected, actual);
+    try std.testing.expectEqual(@as(u8, 15), actual);
 }
 
-test ".contains(...)" {
-    var input = &[_]u8{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+test "contains" {
+    var iter = from.slice(&[_]u8{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
     {
-        var iter = from.slice(u8, input);
         var actual = iter.contains(5);
         try std.testing.expectEqual(true, actual);
     }
     {
-        var iter = from.slice(u8, input);
         var actual = iter.contains(20);
         try std.testing.expectEqual(false, actual);
     }
 }
 
-test ".indexOf(...)" {
-    var input = &[_]u8{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+test "indexOf" {
+    var iter = from.slice(&[_]u8{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
     {
-        var iter = from.slice(u8, input);
         var actual = iter.indexOf(1);
         try std.testing.expectEqual(@as(?usize, 0), actual);
     }
     {
-        var iter = from.slice(u8, input);
         var actual = iter.indexOf(5);
         try std.testing.expectEqual(@as(?usize, 4), actual);
     }
     {
-        var iter = from.slice(u8, input);
         var actual = iter.indexOf(10);
         try std.testing.expectEqual(@as(?usize, 9), actual);
     }
     {
-        var iter = from.slice(u8, input);
         var actual = iter.indexOf(20);
         try std.testing.expectEqual(@as(?usize, null), actual);
     }
 }
 
-test ".sequenceEqual(...)" {
-    var input = &[_]u8{ 1, 2, 3 };
+test "sequenceEqual" {
     {
-        var first_iter = from.slice(u8, input);
-        var second_input = &[_]u8{ 1, 2, 3 };
-        var second_iter = from.slice(u8, second_input);
+        var first_iter = from.slice(&[_]u8{ 1, 2, 3 });
+        var second_iter = from.slice(&[_]u8{ 1, 2, 3 });
         var actual = first_iter.sequenceEqual(&second_iter);
         try std.testing.expectEqual(true, actual);
     }
     {
-        var first_iter = from.slice(u8, input);
-        var second_input = &[_]u8{ 1, 2, 3, 4 };
-        var second_iter = from.slice(u8, second_input);
+        var first_iter = from.slice(&[_]u8{ 1, 2, 3 });
+        var second_iter = from.slice(&[_]u8{ 1, 2, 3, 4 });
         var actual = first_iter.sequenceEqual(&second_iter);
         try std.testing.expectEqual(false, actual);
     }
     {
-        var first_iter = from.slice(u8, input);
-        var second_input = &[_]u8{ 1, 2 };
-        var second_iter = from.slice(u8, second_input);
+        var first_iter = from.slice(&[_]u8{ 1, 2, 3 });
+        var second_iter = from.slice(&[_]u8{ 1, 2 });
         var actual = first_iter.sequenceEqual(&second_iter);
         try std.testing.expectEqual(false, actual);
     }
     {
-        var first_iter = from.slice(u8, input);
-        var second_input = &[_]u8{ 1, 2, 4 };
-        var second_iter = from.slice(u8, second_input);
+        var first_iter = from.slice(&[_]u8{ 1, 2, 3 });
+        var second_iter = from.slice(&[_]u8{ 1, 2, 4 });
         var actual = first_iter.sequenceEqual(&second_iter);
         try std.testing.expectEqual(false, actual);
     }
 }
 
-test ".isSortedAscending()" {
+test "isSortedAscending" {
     {
-        var input = &[_]u8{ 1, 2, 3 };
-        var iter = from.slice(u8, input);
+        var iter = from.slice(&[_]u8{ 1, 2, 3 });
         var actual = iter.isSortedAscending();
         try std.testing.expectEqual(true, actual);
     }
     {
         var input = &[_]u8{ 1, 3, 2 };
-        var iter = from.slice(u8, input);
+        var iter = from.slice(input);
         var actual = iter.isSortedAscending();
         try std.testing.expectEqual(false, actual);
     }
 }
 
-test ".isSortedDescending()" {
+test "isSortedDescending" {
     {
-        var input = &[_]u8{ 3, 2, 1 };
-        var iter = from.slice(u8, input);
+        var iter = from.slice(&[_]u8{ 3, 2, 1 });
         var actual = iter.isSortedDescending();
         try std.testing.expectEqual(true, actual);
     }
     {
-        var input = &[_]u8{ 3, 1, 2 };
-        var iter = from.slice(u8, input);
+        var iter = from.slice(&[_]u8{ 3, 1, 2 });
         var actual = iter.isSortedDescending();
         try std.testing.expectEqual(false, actual);
     }
 }
 
-test ".isSortedAscendingBy()" {
+test "isSortedAscendingBy" {
     {
-        var input = &[_]Person{
+        var iter = from.slice(&[_]Person{
             .{ .name = "Marry", .age = 1 },
             .{ .name = "Dave", .age = 2 },
             .{ .name = "Gerthrude", .age = 3 },
             .{ .name = "Casper", .age = 4 },
             .{ .name = "John", .age = 5 },
-        };
-        var iter = from.slice(Person, input);
+        });
         var actual = iter.isSortedAscendingBy(u8, age);
         try std.testing.expectEqual(true, actual);
     }
     {
-        var input = &[_]Person{
+        var iter = from.slice(&[_]Person{
             .{ .name = "Marry", .age = 1 },
             .{ .name = "Dave", .age = 2 },
             .{ .name = "Casper", .age = 4 },
             .{ .name = "John", .age = 5 },
             .{ .name = "Gerthrude", .age = 3 },
-        };
-        var iter = from.slice(Person, input);
+        });
         var actual = iter.isSortedAscendingBy(u8, age);
         try std.testing.expectEqual(false, actual);
     }
 }
 
-test ".isSortedDescendingBy()" {
+test "isSortedDescendingBy" {
     {
-        var input = &[_]Person{
+        var iter = from.slice(&[_]Person{
             .{ .name = "John", .age = 5 },
             .{ .name = "Casper", .age = 4 },
             .{ .name = "Gerthrude", .age = 3 },
             .{ .name = "Dave", .age = 2 },
             .{ .name = "Marry", .age = 1 },
-        };
-        var iter = from.slice(Person, input);
+        });
         var actual = iter.isSortedDescendingBy(u8, age);
         try std.testing.expectEqual(true, actual);
     }
     {
-        var input = &[_]Person{
+        var iter = from.slice(&[_]Person{
             .{ .name = "John", .age = 5 },
             .{ .name = "Casper", .age = 4 },
             .{ .name = "Dave", .age = 2 },
             .{ .name = "Marry", .age = 1 },
             .{ .name = "Gerthrude", .age = 3 },
-        };
-        var iter = from.slice(Person, input);
+        });
         var actual = iter.isSortedDescendingBy(u8, age);
         try std.testing.expectEqual(false, actual);
     }
 }
 
-test ".window(...)" {
+test "window" {
     {
-        var input = &[_]u8{ 1, 2, 3, 4, 5 };
-        var iter = from.slice(u8, input);
-        var actual = iter.window(3);
+        var actual = from.slice(&[_]u8{ 1, 2, 3, 4, 5 }).window(3);
         var expecpted = &[_][3]u8{
             .{ 1, 2, 3 },
             .{ 2, 3, 4 },
@@ -1342,9 +1063,7 @@ test ".window(...)" {
         try expectEqualIter([3]u8, expecpted, actual);
     }
     {
-        var input = &[_]u8{ 1, 2, 3, 4, 5 };
-        var iter = from.slice(u8, input);
-        var actual = iter.window(1);
+        var actual = from.slice(&[_]u8{ 1, 2, 3, 4, 5 }).window(1);
         var expecpted = &[_][1]u8{
             .{1},
             .{2},
@@ -1355,53 +1074,47 @@ test ".window(...)" {
         try expectEqualIter([1]u8, expecpted, actual);
     }
     {
-        var input = &[_]u8{ 1, 2, 3, 4, 5 };
-        var iter = from.slice(u8, input);
-        var actual = iter.window(5);
+        var actual = from.slice(&[_]u8{ 1, 2, 3, 4, 5 }).window(5);
         var expecpted = &[_][5]u8{
             .{ 1, 2, 3, 4, 5 },
         };
         try expectEqualIter([5]u8, expecpted, actual);
     }
     {
-        var input = &[_]u8{ 1, 2, 3, 4, 5 };
-        var iter = from.slice(u8, input);
-        var actual = iter.window(6);
-        var expecpted = &[_][6]u8{};
-        try expectEqualIter([6]u8, expecpted, actual);
+        var actual = from.slice(&[_]u8{ 1, 2, 3, 4, 5 }).window(6);
+        var expected = &[_][6]u8{};
+        try expectEqualIter([6]u8, expected, actual);
     }
 }
 
-test ".reverse() on slice iter" {
-    var input = &[_]u8{ 1, 2, 3, 4, 5 };
-    var iter = from.slice(u8, input);
-    var actual = iter.reverse();
-    try expectEqualIter(u8, &[_]u8{ 5, 4, 3, 2, 1 }, actual);
+test "reverse" {
+    var iter = from.slice(&[_]u8{ 1, 2, 3, 4, 5 });
+    const actual = iter.reverse();
+    try expectEqualIter(u8, &.{ 5, 4, 3, 2, 1 }, actual);
 }
 
-test ".average() floats" {
-    var iter = from.range(f32, 1, 5);
-    var actual = iter.average();
-    try std.testing.expectEqual(@as(f32, 2.5), actual);
+test "average" {
+    {
+        var iter = from.range(f32, 1, 5);
+        const actual = iter.average();
+        try std.testing.expectEqual(@as(f32, 2.5), actual);
+    }
+    {
+        var iter = from.range(u32, 1, 5);
+        const actual = iter.average();
+        try std.testing.expectEqual(@as(u32, 2), actual);
+    }
 }
 
-test ".average() unsigned ints" {
-    var iter = from.range(u32, 1, 5);
-    var actual = iter.average();
-    try std.testing.expectEqual(@as(u32, 2), actual);
-}
-
-test ".averageFloor() signed ints" {
-    var input = &[_]i32{ -1, -2, -2 };
-    var iter = from.slice(i32, input);
-    var actual = iter.averageFloor();
+test "averageFloor" {
+    var iter = from.slice(&[_]i32{ -1, -2, -2 });
+    const actual = iter.averageFloor();
     try std.testing.expectEqual(@as(i32, -2), actual);
 }
 
-test ".averageTrunc() signed ints" {
-    var input = &[_]i32{ -1, -2, -2 };
-    var iter = from.slice(i32, input);
-    var actual = iter.averageTrunc();
+test "averageTrunc" {
+    var iter = from.slice(&[_]i32{ -1, -2, -2 });
+    const actual = iter.averageTrunc();
     try std.testing.expectEqual(@as(i32, -1), actual);
 }
 
@@ -1424,49 +1137,40 @@ fn elevation(reading: TempReading) i32 {
     return reading.elevation;
 }
 
-test ".averageBy() floats" {
-    var input = &[_]TempReading{
+test "averageBy" {
+    var iter = from.slice(&[_]TempReading{
         .{ .location = "London", .degrees_celsius = 10, .day = 352, .elevation = 11 },
         .{ .location = "New York", .degrees_celsius = 4, .day = 350, .elevation = 10 },
         .{ .location = "Tokyo", .degrees_celsius = 9, .day = 357, .elevation = 40 },
         .{ .location = "Vilnius", .degrees_celsius = 1, .day = 361, .elevation = 112 },
-    };
-    var iter = from.slice(TempReading, input);
-    var actual = iter.averageBy(f32, temp);
-    try std.testing.expectEqual(@as(f32, 6.0), actual);
+    });
+    {
+        const actual = iter.averageBy(f32, temp);
+        try std.testing.expectEqual(@as(f32, 6.0), actual);
+    }
+    {
+        const actual = iter.averageBy(u32, day);
+        try std.testing.expectEqual(@as(u32, 355), actual);
+    }
 }
 
-test ".averageBy() unsigned ints" {
-    var input = &[_]TempReading{
-        .{ .location = "London", .degrees_celsius = 10, .day = 352, .elevation = 11 },
-        .{ .location = "New York", .degrees_celsius = 4, .day = 350, .elevation = 10 },
-        .{ .location = "Tokyo", .degrees_celsius = 9, .day = 357, .elevation = 40 },
-        .{ .location = "Vilnius", .degrees_celsius = 1, .day = 361, .elevation = 112 },
-    };
-    var iter = from.slice(TempReading, input);
-    var actual = iter.averageBy(u32, day);
-    try std.testing.expectEqual(@as(u32, 355), actual);
-}
-
-test ".averageFloorBy() signed ints" {
-    var input = &[_]TempReading{
+test "averageFloorBy" {
+    var iter = from.slice(&[_]TempReading{
         .{ .location = "Carribean Sea", .degrees_celsius = 28.5, .day = 352, .elevation = -1 },
         .{ .location = "Mediterranean Sea", .degrees_celsius = 14.1, .day = 357, .elevation = -2 },
         .{ .location = "Baltic Sea", .degrees_celsius = 3.2, .day = 361, .elevation = -2 },
-    };
-    var iter = from.slice(TempReading, input);
-    var actual = iter.averageFloorBy(i32, elevation);
+    });
+    const actual = iter.averageFloorBy(i32, elevation);
     try std.testing.expectEqual(@as(i32, -2), actual);
 }
 
-test ".averageTruncBy() signed ints" {
-    var input = &[_]TempReading{
+test "averageTruncBy" {
+    var iter = from.slice(&[_]TempReading{
         .{ .location = "Carribean Sea", .degrees_celsius = 28.5, .day = 352, .elevation = -1 },
         .{ .location = "Mediterranean Sea", .degrees_celsius = 14.1, .day = 357, .elevation = -2 },
         .{ .location = "Baltic Sea", .degrees_celsius = 3.2, .day = 361, .elevation = -2 },
-    };
-    var iter = from.slice(TempReading, input);
-    var actual = iter.averageTruncBy(i32, elevation);
+    });
+    const actual = iter.averageTruncBy(i32, elevation);
     try std.testing.expectEqual(@as(i32, -1), actual);
 }
 

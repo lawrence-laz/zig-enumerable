@@ -18,7 +18,7 @@ pub fn SelectManyIterator(
             if (self.slice_iter == null) {
                 if (self.prev_iter.next()) |item| {
                     var slice = selectFn(item);
-                    self.slice_iter = from.slice(TDest, slice);
+                    self.slice_iter = from.slice(slice);
                 } else {
                     return null;
                 }
@@ -29,7 +29,7 @@ pub fn SelectManyIterator(
             } else {
                 while (self.prev_iter.next()) |item| {
                     var slice = selectFn(item);
-                    self.slice_iter = from.slice(TDest, slice);
+                    self.slice_iter = from.slice(slice);
                     if (self.slice_iter.?.next()) |slice_item| {
                         return slice_item;
                     }
