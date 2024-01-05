@@ -102,7 +102,7 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             comptime function: fn (TItem) bool,
         ) Iterator(TItem, WhereIterator(TItem, function, TImpl)) {
             var self_copy = self.*;
-            return .{ .impl = WhereIterator(TItem, function, TImpl){
+            return .{ .impl = .{
                 .prev_iter = self_copy.impl,
             } };
         }
@@ -113,7 +113,7 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             comptime function: fn (TItem) TDest,
         ) Iterator(TDest, SelectIterator(TItem, TDest, function, TImpl)) {
             var self_copy = self.*;
-            return .{ .impl = SelectIterator(TItem, TDest, function, TImpl){
+            return .{ .impl = .{
                 .prev_iter = self_copy.impl,
             } };
         }
@@ -124,7 +124,7 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             comptime function: fn (TItem) []const TDest,
         ) Iterator(TDest, SelectManyIterator(TItem, TDest, function, TImpl)) {
             var self_copy = self.*;
-            return .{ .impl = SelectManyIterator(TItem, TDest, function, TImpl){
+            return .{ .impl = .{
                 .prev_iter = self_copy.impl,
                 .slice_iter = null,
             } };
@@ -135,7 +135,7 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             comptime size: usize,
         ) Iterator([size]TItem, WindowIterator(TItem, size, TImpl)) {
             var self_copy = self.*;
-            return .{ .impl = WindowIterator(TItem, size, TImpl){
+            return .{ .impl = .{
                 .prev_iter = self_copy.impl,
                 .maybe_window = null,
             } };
@@ -148,7 +148,7 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             initial_state: TState,
         ) Iterator(TState, ScanIterator(TItem, TState, function, TImpl)) {
             var self_copy = self.*;
-            return .{ .impl = ScanIterator(TItem, TState, function, TImpl){
+            return .{ .impl = .{
                 .state = initial_state,
                 .prev_iter = self_copy.impl,
             } };
@@ -221,7 +221,7 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             other_iter: anytype,
         ) Iterator(TItem, ConcatIterator(TItem, TImpl, @TypeOf(other_iter))) {
             var self_copy = self.*;
-            return .{ .impl = ConcatIterator(TItem, TImpl, @TypeOf(other_iter)){
+            return .{ .impl = .{
                 .prev_iter = self_copy.impl,
                 .next_iter = other_iter,
             } };
@@ -239,7 +239,7 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             other_iter: anytype,
         ) Iterator(struct { TItem, TOtherItem }, ZipIterator(TItem, TImpl, @TypeOf(other_iter), TOtherItem)) {
             var self_copy = self.*;
-            return .{ .impl = ZipIterator(TItem, TImpl, @TypeOf(other_iter), TOtherItem){
+            return .{ .impl = .{
                 .prev_iter = self_copy.impl,
                 .other_iter = other_iter,
             } };
@@ -250,7 +250,7 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             item: TItem,
         ) Iterator(TItem, AppendIterator(TItem, TImpl)) {
             var self_copy = self.*;
-            return .{ .impl = AppendIterator(TItem, TImpl){
+            return .{ .impl = .{
                 .prev_iter = self_copy.impl,
                 .appended_item = item,
             } };
@@ -260,7 +260,7 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             self: *const Self,
             delimiter: TItem,
         ) Iterator(TItem, IntersperseIterator(TItem, TImpl)) {
-            return .{ .impl = IntersperseIterator(TItem, TImpl){
+            return .{ .impl = .{
                 .prev_iter = self.peekable().impl,
                 .delimiter = delimiter,
                 .next_is_delimiter = false,
@@ -269,7 +269,7 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
 
         pub inline fn peekable(self: *const Self) Iterator(TItem, PeekableIterator(TItem, TImpl)) {
             var self_copy = self.*;
-            return .{ .impl = PeekableIterator(TItem, TImpl){
+            return .{ .impl = .{
                 .prev_iter = self_copy.impl,
                 .peeked_item = null,
             } };
@@ -280,7 +280,7 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             item_count: usize,
         ) Iterator(TItem, TakeIterator(TItem, TImpl)) {
             var self_copy = self.*;
-            return .{ .impl = TakeIterator(TItem, TImpl){
+            return .{ .impl = .{
                 .prev_iter = self_copy.impl,
                 .index = 0,
                 .count = item_count,
@@ -292,7 +292,7 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             every_nth: usize,
         ) Iterator(TItem, TakeEveryIterator(TItem, TImpl)) {
             var self_copy = self.*;
-            return .{ .impl = TakeEveryIterator(TItem, TImpl){
+            return .{ .impl = .{
                 .prev_iter = self_copy.impl,
                 .every_nth = every_nth,
             } };
@@ -303,7 +303,7 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             comptime function: fn (TItem) bool,
         ) Iterator(TItem, TakeWhileIterator(TItem, function, TImpl)) {
             var self_copy = self.*;
-            return .{ .impl = TakeWhileIterator(TItem, function, TImpl){
+            return .{ .impl = .{
                 .prev_iter = self_copy.impl,
                 .completed = false,
             } };
@@ -326,7 +326,7 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             item_count: usize,
         ) Iterator(TItem, SkipIterator(TItem, TImpl)) {
             var self_copy = self.*;
-            return .{ .impl = SkipIterator(TItem, TImpl){
+            return .{ .impl = .{
                 .prev_iter = self_copy.impl,
                 .index = 0,
                 .count = item_count,
