@@ -92,18 +92,20 @@ pub fn Iterator(
             return true;
         }
 
-        pub fn firstOrDefault(self: *const Self) ?TItem {
+        /// Returns the first item of the iterator or `null` if iterator is finished.
+        pub fn first(self: *const Self) ?TItem {
             var self_copy = self.*;
             return self_copy.next() orelse null;
         }
 
-        pub fn lastOrDefault(self: *const Self) ?TItem {
+        /// Returns the last item of the iterator or `null` if iterator is finished.
+        pub fn last(self: *const Self) ?TItem {
             var self_copy = self.*;
-            var last: ?TItem = null;
+            var last_item: ?TItem = null;
             while (self_copy.next()) |item| {
-                last = item;
+                last_item = item;
             }
-            return last;
+            return last_item;
         }
 
         pub fn elementAt(
@@ -740,28 +742,28 @@ test "all" {
     }
 }
 
-test "firstOrDefault" {
+test "first" {
     {
         var iterator = from.slice(&[_]u8{});
-        const actual = iterator.firstOrDefault();
+        const actual = iterator.first();
         try std.testing.expectEqual(@as(?u8, null), actual);
     }
     {
         var iterator = from.slice(&[_]u8{ 1, 2, 3 });
-        const actual = iterator.firstOrDefault();
+        const actual = iterator.first();
         try std.testing.expectEqual(@as(?u8, 1), actual);
     }
 }
 
-test "lastOrDefault" {
+test "last" {
     {
         var iterator = from.slice(&[_]u8{});
-        const actual = iterator.lastOrDefault();
+        const actual = iterator.last();
         try std.testing.expectEqual(@as(?u8, null), actual);
     }
     {
         var iterator = from.slice(&[_]u8{ 1, 2, 3 });
-        const actual = iterator.lastOrDefault();
+        const actual = iterator.last();
         try std.testing.expectEqual(@as(?u8, 3), actual);
     }
 }
