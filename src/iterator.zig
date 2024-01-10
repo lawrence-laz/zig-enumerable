@@ -17,16 +17,28 @@ const IntersperseIterator = @import("intersperse_iterator.zig").IntersperseItera
 const ScanIterator = @import("scan_iterator.zig").ScanIterator;
 const SliceIterator = @import("from/slice_iterator.zig").SliceIterator;
 
-pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
+/// A common interface type for all iterators.
+/// Holds all user facing functions.
+pub fn Iterator(
+    /// The type of items being iterated.
+    comptime TItem: type,
+    /// The concrete implementation of the current iterator.
+    comptime TImpl: type,
+) type {
     return struct {
         const Self = @This();
 
         impl: TImpl,
 
+        /// Advances the iterator and returns the next item.
+        ///
+        /// Returns `null` when iteration is finished.
+        /// Some iterators might never return `null`, thus making them infinite.
         pub fn next(self: *Self) ?TItem {
             return self.impl.next();
         }
 
+        /// Returns the number of items in the iterator.
         pub fn count(self: *const Self) usize {
             var self_copy = self.*;
             var result: usize = 0;
@@ -36,6 +48,9 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             return result;
         }
 
+        /// Returns the sum of all items in the iterators.
+        ///
+        /// Items are expected to support `+=` operator.
         pub fn sum(self: *const Self) TItem {
             var self_copy = self.*;
             var result: TItem = 0;
@@ -45,6 +60,9 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             return result;
         }
 
+        /// Returns whether the iterator contains at least one item satisfying the condition function.
+        ///
+        /// An empty iterator always returns `false`.
         pub fn any(
             self: *const Self,
             comptime function: fn (TItem) bool,
@@ -58,6 +76,9 @@ pub fn Iterator(comptime TItem: type, comptime TImpl: type) type {
             return false;
         }
 
+        /// Returns whether all items in the iterator satisfy the condition function.
+        ///
+        /// An empty iterator always returns `true`.
         pub fn all(
             self: *const Self,
             comptime function: fn (TItem) bool,
