@@ -7,6 +7,7 @@ const WindowIterator = @import("window_iterator.zig").WindowIterator;
 const ConcatIterator = @import("concat_iterator.zig").ConcatIterator;
 const ZipIterator = @import("zip_iterator.zig").ZipIterator;
 const AppendIterator = @import("append_iterator.zig").AppendIterator;
+const PrependIterator = @import("prepend_iterator.zig").PrependIterator;
 const TakeIterator = @import("take_iterator.zig").TakeIterator;
 const TakeEveryIterator = @import("take_every_iterator.zig").TakeEveryIterator;
 const TakeWhileIterator = @import("take_while_iterator.zig").TakeWhileIterator;
@@ -296,6 +297,18 @@ pub fn Iterator(
             return .{ .impl = .{
                 .prev_iter = self_copy.impl,
                 .appended_item = item,
+            } };
+        }
+
+        /// Prepends an item to the start of the iterator.
+        pub inline fn prepend(
+            self: *const Self,
+            item: TItem,
+        ) Iterator(TItem, PrependIterator(TItem, TImpl)) {
+            var self_copy = self.*;
+            return .{ .impl = .{
+                .prev_iter = self_copy.impl,
+                .prepended_item = item,
             } };
         }
 
@@ -820,6 +833,13 @@ test "append" {
     var actual = iter.append(4);
     // Assert
     try expectEqualIter(u8, &.{ 1, 2, 3, 4 }, actual);
+}
+
+test "prepend" {
+    var iter = from.slice(&[_]u8{ 1, 2, 3 });
+    var actual = iter.prepend(4);
+    // Assert
+    try expectEqualIter(u8, &.{ 4, 1, 2, 3 }, actual);
 }
 
 test "take" {
