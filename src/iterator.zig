@@ -236,6 +236,7 @@ pub fn Iterator(
             }
         }
 
+        /// Returns the index of the `needle` item or `null` if not found.
         pub inline fn indexOf(
             self: *const Self,
             needle: TItem,
@@ -251,6 +252,9 @@ pub fn Iterator(
             return null;
         }
 
+        /// Returns an iterator that yields items from both iterators.
+        ///
+        /// Current iterator goes first, and once it is finished it continues with the other one.
         pub inline fn concat(
             self: *const Self,
             other_iter: anytype,
@@ -268,6 +272,9 @@ pub fn Iterator(
             return iter_type_info.Fn.return_type;
         }
 
+        /// Combines the items of two iterators into a single iterator of pairs.
+        ///
+        /// First element of the pair comes from the first iterator, and the second element comes from the second iterator.
         pub inline fn zip(
             self: *const Self,
             comptime TOtherItem: type,
@@ -280,6 +287,7 @@ pub fn Iterator(
             } };
         }
 
+        /// Appends an item to the end of the iterator.
         pub inline fn append(
             self: *const Self,
             item: TItem,
