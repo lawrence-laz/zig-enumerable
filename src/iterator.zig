@@ -312,17 +312,19 @@ pub fn Iterator(
             } };
         }
 
+        /// Adds a separator item between adjacent items of the original iterator.
         pub inline fn intersperse(
             self: *const Self,
-            delimiter: TItem,
+            separator: TItem,
         ) Iterator(TItem, IntersperseIterator(TItem, TImpl)) {
             return .{ .impl = .{
                 .prev_iter = self.peekable().impl,
-                .delimiter = delimiter,
+                .delimiter = separator,
                 .next_is_delimiter = false,
             } };
         }
 
+        /// Returns an iterator, which can peek the next value without advancing the iterator.
         pub inline fn peekable(self: *const Self) Iterator(TItem, PeekableIterator(TItem, TImpl)) {
             var self_copy = self.*;
             return .{ .impl = .{
@@ -331,6 +333,8 @@ pub fn Iterator(
             } };
         }
 
+        /// Return the specified number of items from the start of the iterator,
+        /// or fewer if the iterator finishes sooner.
         pub inline fn take(
             self: *const Self,
             item_count: usize,
@@ -343,6 +347,7 @@ pub fn Iterator(
             } };
         }
 
+        /// Return every nth item of the iterator.
         pub inline fn takeEvery(
             self: *const Self,
             every_nth: usize,
@@ -354,6 +359,9 @@ pub fn Iterator(
             } };
         }
 
+        /// Returns items while the condition function returns `true`.
+        ///
+        /// Unlike `filter`, finishes when the condition function returns `false` the first time.
         pub inline fn takeWhile(
             self: *const Self,
             comptime function: fn (TItem) bool,
@@ -365,6 +373,7 @@ pub fn Iterator(
             } };
         }
 
+        /// Collects the iterator into an array list.
         pub inline fn toArrayList(
             self: *const Self,
             allocator: std.mem.Allocator,
@@ -377,6 +386,7 @@ pub fn Iterator(
             return array_list;
         }
 
+        /// Skips a specified number of items in the iterator and then returns the remaining items.
         pub inline fn skip(
             self: *const Self,
             item_count: usize,
@@ -389,6 +399,7 @@ pub fn Iterator(
             } };
         }
 
+        /// Skips items while the condition function returns `true` and then returns the remaining items.
         pub inline fn skipWhile(
             self: *const Self,
             comptime function: fn (TItem) bool,
@@ -400,6 +411,7 @@ pub fn Iterator(
             } };
         }
 
+        /// Calls a function on each item of the iterator.
         pub inline fn forEach(
             self: *const Self,
             function: *const fn (TItem) void,
@@ -410,6 +422,9 @@ pub fn Iterator(
             }
         }
 
+        /// Calls a function on each item of the iterator and yields the item.
+        ///
+        /// Useful for inspecting a chain of iterators at any particular point.
         pub inline fn inspect(
             self: *const Self,
             function: *const fn (TItem) void,
