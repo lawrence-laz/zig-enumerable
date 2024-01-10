@@ -185,7 +185,10 @@ pub fn Iterator(
             } };
         }
 
-        pub inline fn aggregate(
+        /// Folds items using the given function into a single value.
+        ///
+        /// Unlike `scan`, finishes iterations immediately and returns the result.
+        pub inline fn fold(
             self: *const Self,
             comptime TDest: type,
             comptime function: fn (TDest, TItem) TDest,
@@ -941,9 +944,9 @@ test "scan" {
     try expectEqualIter(u8, &[_]u8{ 1, 3, 6, 10, 15 }, actual);
 }
 
-test "aggregate" {
+test "fold" {
     var iter = from.slice(&[_]u8{ 1, 2, 3, 4, 5 });
-    var actual = iter.aggregate(u8, add, 0);
+    var actual = iter.fold(u8, add, 0);
     try std.testing.expectEqual(@as(u8, 15), actual);
 }
 
