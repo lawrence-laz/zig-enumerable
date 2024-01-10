@@ -1,6 +1,6 @@
 const Iterator = @import("iterator.zig").Iterator;
 
-pub fn WhereIterator(
+pub fn FilterIterator(
     comptime TItem: type,
     comptime filter: fn (TItem) bool,
     comptime TPrevIter: type,

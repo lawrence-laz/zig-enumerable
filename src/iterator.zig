@@ -1,6 +1,6 @@
 const std = @import("std");
 const from = @import("from.zig");
-const WhereIterator = @import("where_iterator.zig").WhereIterator;
+const FilterIterator = @import("filter_iterator.zig").FilterIterator;
 const SelectIterator = @import("select_iterator.zig").SelectIterator;
 const SelectManyIterator = @import("select_many_iterator.zig").SelectManyIterator;
 const WindowIterator = @import("window_iterator.zig").WindowIterator;
@@ -121,10 +121,11 @@ pub fn Iterator(
             return self_copy.next();
         }
 
-        pub inline fn where(
+        /// Filters the items using the given function.
+        pub inline fn filter(
             self: *const Self,
             comptime function: fn (TItem) bool,
-        ) Iterator(TItem, WhereIterator(TItem, function, TImpl)) {
+        ) Iterator(TItem, FilterIterator(TItem, function, TImpl)) {
             var self_copy = self.*;
             return .{ .impl = .{
                 .prev_iter = self_copy.impl,
@@ -674,13 +675,13 @@ fn even(number: u8) bool {
 
 test "chained example" {
     const input = "Number 1 and 2, then goes 3 and last one 4 is excluded.";
-    const result = from.slice(input).where(std.ascii.isDigit).take(3).intersperse('+');
+    const result = from.slice(input).filter(std.ascii.isDigit).take(3).intersperse('+');
     try expectEqualIter(u8, "1+2+3", result);
 }
 
-test "where" {
+test "filter" {
     var iter = from.slice(&[_]u8{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
-    var actual = iter.where(even);
+    var actual = iter.filter(even);
     try expectEqualIter(u8, &.{ 2, 4, 6, 8, 10 }, actual);
 }
 
