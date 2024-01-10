@@ -1,8 +1,8 @@
 const std = @import("std");
 const from = @import("from.zig");
 const FilterIterator = @import("filter_iterator.zig").FilterIterator;
-const SelectIterator = @import("select_iterator.zig").SelectIterator;
-const SelectManyIterator = @import("select_many_iterator.zig").SelectManyIterator;
+const MapIterator = @import("map_iterator.zig").MapIterator;
+const FlatMapIterator = @import("flat_map_iterator.zig").FlatMapIterator;
 const WindowIterator = @import("window_iterator.zig").WindowIterator;
 const ConcatIterator = @import("concat_iterator.zig").ConcatIterator;
 const ZipIterator = @import("zip_iterator.zig").ZipIterator;
@@ -132,22 +132,24 @@ pub fn Iterator(
             } };
         }
 
-        pub inline fn select(
+        /// Transforms the items using the given function.
+        pub inline fn map(
             self: *const Self,
             comptime TDest: type,
             comptime function: fn (TItem) TDest,
-        ) Iterator(TDest, SelectIterator(TItem, TDest, function, TImpl)) {
+        ) Iterator(TDest, MapIterator(TItem, TDest, function, TImpl)) {
             var self_copy = self.*;
             return .{ .impl = .{
                 .prev_iter = self_copy.impl,
             } };
         }
 
-        pub inline fn selectMany(
+        /// Transforms the items using the given function and flattens the result.
+        pub inline fn flatMap(
             self: *const Self,
             comptime TDest: type,
             comptime function: fn (TItem) []const TDest,
-        ) Iterator(TDest, SelectManyIterator(TItem, TDest, function, TImpl)) {
+        ) Iterator(TDest, FlatMapIterator(TItem, TDest, function, TImpl)) {
             var self_copy = self.*;
             return .{ .impl = .{
                 .prev_iter = self_copy.impl,
@@ -689,9 +691,9 @@ fn negative(number: u8) i8 {
     return @as(i8, @intCast(number)) * -1;
 }
 
-test "select" {
+test "map" {
     var iter = from.slice(&[_]u8{ 1, 2, 3 });
-    var actual = iter.select(i8, negative);
+    var actual = iter.map(i8, negative);
     try expectEqualIter(i8, &.{ -1, -2, -3 }, actual);
 }
 
@@ -699,7 +701,7 @@ const Foo = struct { numbers: []const u8 };
 fn getNumbers(foo: Foo) []const u8 {
     return foo.numbers;
 }
-test "selectMany" {
+test "flatMap" {
     var iterator = from.slice(&[_]Foo{
         .{ .numbers = &.{} },
         .{ .numbers = &.{ 1, 2 } },
@@ -710,7 +712,7 @@ test "selectMany" {
         .{ .numbers = &.{ 6, 7 } },
         .{ .numbers = &.{} },
     });
-    var actual = iterator.selectMany(u8, getNumbers);
+    var actual = iterator.flatMap(u8, getNumbers);
     try expectEqualIter(u8, &.{ 1, 2, 3, 4, 5, 6, 7 }, actual);
 }
 

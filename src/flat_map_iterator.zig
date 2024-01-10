@@ -2,10 +2,10 @@ const Iterator = @import("iterator.zig").Iterator;
 const from = @import("from.zig");
 const SliceIterator = @import("from/slice_iterator.zig").SliceIterator;
 
-pub fn SelectManyIterator(
+pub fn FlatMapIterator(
     comptime TSource: type,
     comptime TDest: type,
-    comptime selectFn: fn (TSource) []const TDest,
+    comptime function: fn (TSource) []const TDest,
     comptime TPrevIter: type,
 ) type {
     return struct {
@@ -17,7 +17,7 @@ pub fn SelectManyIterator(
         pub fn next(self: *Self) ?TDest {
             if (self.slice_iter == null) {
                 if (self.prev_iter.next()) |item| {
-                    var slice = selectFn(item);
+                    var slice = function(item);
                     self.slice_iter = from.slice(slice);
                 } else {
                     return null;
@@ -28,7 +28,7 @@ pub fn SelectManyIterator(
                 return slice_item;
             } else {
                 while (self.prev_iter.next()) |item| {
-                    var slice = selectFn(item);
+                    var slice = function(item);
                     self.slice_iter = from.slice(slice);
                     if (self.slice_iter.?.next()) |slice_item| {
                         return slice_item;

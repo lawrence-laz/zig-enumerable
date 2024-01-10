@@ -1,6 +1,6 @@
 const Iterator = @import("iterator.zig").Iterator;
 
-pub fn SelectIterator(
+pub fn MapIterator(
     comptime TSource: type,
     comptime TDest: type,
     comptime project: fn (TSource) TDest,
