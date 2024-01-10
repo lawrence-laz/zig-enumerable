@@ -108,7 +108,8 @@ pub fn Iterator(
             return last_item;
         }
 
-        pub fn elementAt(
+        /// Returns the item at a specified index or `null` if index is out of bounds.
+        pub fn nth(
             self: *const Self,
             index: usize,
         ) ?TItem {
@@ -768,15 +769,15 @@ test "last" {
     }
 }
 
-test "elementAt" {
+test "nth" {
     {
         var iterator = from.slice(&[_]u8{});
-        const actual = iterator.elementAt(5);
+        const actual = iterator.nth(5);
         try std.testing.expectEqual(@as(?u8, null), actual);
     }
     {
         var iterator = from.slice(&[_]u8{ 1, 2, 3 });
-        const actual = iterator.elementAt(2);
+        const actual = iterator.nth(2);
         try std.testing.expectEqual(@as(?u8, 3), actual);
     }
 }
