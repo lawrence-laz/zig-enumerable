@@ -16,9 +16,15 @@ pub inline fn slice(sliceArg: anytype) Iterator(std.meta.Elem(@TypeOf(sliceArg))
     return .{ .impl = .{ .slice = sliceArg } };
 }
 
+/// Generates a sequence of numbers within a specified range.
+///
+/// Ex.: `enumerable.from.range(i32, 5, 10)` produces `{ 5, 6, 7, 8, 9 }`.
 pub inline fn range(
+    /// The type of the numbers in the sequence.
     comptime TNumber: type,
+    /// The value of the first number in the sequence (inclusive).
     from_inclusive: TNumber,
+    /// The value of the upper bound of the sequence (exclusive).
     to_exclusive: TNumber,
 ) Iterator(TNumber, RangeIterator(TNumber)) {
     return .{ .impl = RangeIterator(TNumber){
