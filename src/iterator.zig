@@ -17,6 +17,7 @@ const PeekableIterator = @import("peekable_iterator.zig").PeekableIterator;
 const IntersperseIterator = @import("intersperse_iterator.zig").IntersperseIterator;
 const ScanIterator = @import("scan_iterator.zig").ScanIterator;
 const SliceIterator = @import("from/slice_iterator.zig").SliceIterator;
+const InspectIterator = @import("inspect_iterator.zig").InspectIterator;
 
 /// A common interface type for all iterators.
 /// Holds all user facing functions.
@@ -427,13 +428,13 @@ pub fn Iterator(
         /// Useful for inspecting a chain of iterators at any particular point.
         pub inline fn inspect(
             self: *const Self,
-            function: *const fn (TItem) void,
-        ) Iterator(TItem, TImpl) {
+            comptime function: fn (TItem) void,
+        ) Iterator(TItem, InspectIterator(TItem, function, TImpl)) {
             var self_copy = self.*;
-            while (self_copy.next()) |item| {
-                function(item);
-            }
-            return self.*;
+
+            return .{ .impl = .{
+                .prev_iter = self_copy.impl,
+            } };
         }
 
         pub inline fn max(self: *const Self) ?TItem {
