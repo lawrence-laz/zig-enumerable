@@ -202,6 +202,7 @@ pub fn Iterator(
             return result;
         }
 
+        /// Returns whether the iterator contains the `needle` item.
         pub inline fn contains(
             self: *const Self,
             needle: TItem,
