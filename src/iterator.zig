@@ -216,12 +216,12 @@ pub fn Iterator(
             return false;
         }
 
-        pub inline fn sequenceEqual(
+        /// Returns whether the iterators are equal.
+        pub inline fn equal(
             self: *const Self,
             other_iter: anytype,
         ) bool {
             var self_copy = self.*;
-            // var other_copy = other_iter.*;
             while (true) {
                 var first_item = self_copy.next();
                 var second_item = other_iter.next();
@@ -983,29 +983,29 @@ test "indexOf" {
     }
 }
 
-test "sequenceEqual" {
+test "equal" {
     {
         var first_iter = from.slice(&[_]u8{ 1, 2, 3 });
         var second_iter = from.slice(&[_]u8{ 1, 2, 3 });
-        var actual = first_iter.sequenceEqual(&second_iter);
+        var actual = first_iter.equal(&second_iter);
         try std.testing.expectEqual(true, actual);
     }
     {
         var first_iter = from.slice(&[_]u8{ 1, 2, 3 });
         var second_iter = from.slice(&[_]u8{ 1, 2, 3, 4 });
-        var actual = first_iter.sequenceEqual(&second_iter);
+        var actual = first_iter.equal(&second_iter);
         try std.testing.expectEqual(false, actual);
     }
     {
         var first_iter = from.slice(&[_]u8{ 1, 2, 3 });
         var second_iter = from.slice(&[_]u8{ 1, 2 });
-        var actual = first_iter.sequenceEqual(&second_iter);
+        var actual = first_iter.equal(&second_iter);
         try std.testing.expectEqual(false, actual);
     }
     {
         var first_iter = from.slice(&[_]u8{ 1, 2, 3 });
         var second_iter = from.slice(&[_]u8{ 1, 2, 4 });
-        var actual = first_iter.sequenceEqual(&second_iter);
+        var actual = first_iter.equal(&second_iter);
         try std.testing.expectEqual(false, actual);
     }
 }
