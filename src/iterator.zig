@@ -437,6 +437,9 @@ pub fn Iterator(
             } };
         }
 
+        /// Returns the maximum item of an iterator
+        ///
+        /// If the iterator is empty, `null` is returned.
         pub inline fn max(self: *const Self) ?TItem {
             var self_copy = self.*;
             var maybe_max_value: ?TItem = null;
@@ -448,6 +451,9 @@ pub fn Iterator(
             return maybe_max_value;
         }
 
+        /// Returns the maximum item of an iterator as determined by the value returned from the specified function.
+        ///
+        /// If the iterator is empty, `null` is returned.
         pub inline fn maxBy(
             self: *const Self,
             comptime TBy: type,
@@ -466,6 +472,9 @@ pub fn Iterator(
             return maybe_max_item;
         }
 
+        /// Returns the minimum item of an iterator as determined by the value returned from the specified function.
+        ///
+        /// If the iterator is empty, `null` is returned.
         pub inline fn minBy(
             self: *const Self,
             comptime TBy: type,
@@ -484,6 +493,9 @@ pub fn Iterator(
             return maybe_min_item;
         }
 
+        /// Returns the minimum item of an iterator
+        ///
+        /// If the iterator is empty, `null` is returned.
         pub inline fn min(self: *const Self) ?TItem {
             var self_copy = self.*;
             var maybe_min_value: ?TItem = null;
@@ -495,6 +507,7 @@ pub fn Iterator(
             return maybe_min_value;
         }
 
+        /// Returns whether the items in the iterator are sorted in ascending order.
         pub inline fn isSortedAscending(self: *const Self) bool {
             var self_copy = self.*;
             var maybe_previous: ?TItem = null;
@@ -509,6 +522,7 @@ pub fn Iterator(
             return true;
         }
 
+        /// Returns whether the items in the iterator are sorted in descending order.
         pub inline fn isSortedDescending(self: *const Self) bool {
             var self_copy = self.*;
             var maybe_previous: ?TItem = null;
@@ -523,6 +537,8 @@ pub fn Iterator(
             return true;
         }
 
+        /// Returns whether the items in the iterator are sorted in ascending order, as determined by the value
+        /// returned from the specified function.
         pub inline fn isSortedAscendingBy(
             self: *const Self,
             comptime TBy: type,
@@ -542,6 +558,8 @@ pub fn Iterator(
             return true;
         }
 
+        /// Returns whether the items in the iterator are sorted in descending order, as determined by the value
+        /// returned from the specified function.
         pub inline fn isSortedDescendingBy(
             self: *const Self,
             comptime TBy: type,
@@ -561,6 +579,10 @@ pub fn Iterator(
             return true;
         }
 
+        /// Inverts the order of items in the iterator.
+        ///
+        /// This function is not supported on iterators where it is not possible to determine iterator length
+        /// and access items by index without advancing the iterator.
         pub inline fn reverse(self: *const Self) Iterator(TItem, SliceIterator(TItem)) {
             if (@hasDecl(TImpl, "reverse")) {
                 var self_impl = self.impl;
@@ -570,6 +592,7 @@ pub fn Iterator(
             }
         }
 
+        /// Returns an average value of all the numbers in the iterator.
         pub inline fn average(self: *const Self) TItem {
             var self_copy = self.*;
             var total_sum: TItem = 0;
@@ -592,6 +615,9 @@ pub fn Iterator(
             }
         }
 
+        /// Returns a truncated average value of all the numbers in the iterator.
+        ///
+        /// Negative values round towards 0.
         pub inline fn averageTrunc(self: *const Self) TItem {
             var self_copy = self.*;
             var total_sum: TItem = 0;
@@ -608,6 +634,9 @@ pub fn Iterator(
             }
         }
 
+        /// Returns a floored average value of all the numbers in the iterator.
+        ///
+        /// Negative values round towards negative infinity.
         pub inline fn averageFloor(self: *const Self) TItem {
             var self_copy = self.*;
             var total_sum: TItem = 0;
@@ -624,6 +653,8 @@ pub fn Iterator(
             }
         }
 
+        /// Returns an average value of all the items in the iterator.
+        /// Numbers are selected using the specified function.
         pub inline fn averageBy(
             self: *const Self,
             comptime TBy: type,
@@ -651,6 +682,8 @@ pub fn Iterator(
             }
         }
 
+        /// Returns a truncated average value of all the items in the iterator.
+        /// Numbers are selected using the specified function.
         pub inline fn averageTruncBy(
             self: *const Self,
             comptime TBy: type,
@@ -672,6 +705,8 @@ pub fn Iterator(
             }
         }
 
+        /// Returns a floored average value of all the items in the iterator.
+        /// Numbers are selected using the specified function.
         pub inline fn averageFloorBy(
             self: *const Self,
             comptime TBy: type,
