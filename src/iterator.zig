@@ -157,6 +157,7 @@ pub fn Iterator(
             } };
         }
 
+        /// Yields items in a sliding window of a specified size.
         pub inline fn window(
             self: *const Self,
             comptime size: usize,
@@ -168,6 +169,9 @@ pub fn Iterator(
             } };
         }
 
+        /// Accumulates items using the given function into a single value.
+        ///
+        /// Unlike `fold`, returns an iterator that can yield intermediate results.
         pub inline fn scan(
             self: *const Self,
             comptime TState: type,
