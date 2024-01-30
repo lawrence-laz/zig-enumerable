@@ -24,7 +24,10 @@ pub fn IteratorItem(comptime TIter: type) type {
     return @typeInfo(@typeInfo(@TypeOf(Iterator(TIter).next)).Fn.return_type.?).Optional.child;
 }
 
-/// Returns a new iterator that iterates over the items in `iterable`.
+/// Returns a new iterator for the given `iterable`.
+///
+/// The function determines the type of the `iterable` and adapts the iterator creation accordingly.
+/// It supports pointers, slices, and other types directly.
 pub inline fn from(iterable: anytype) Iterator(@TypeOf(iterable)) {
     return switch (@typeInfo(@TypeOf(iterable))) {
         .Pointer => |info| switch (info.size) {
@@ -50,10 +53,14 @@ test from {
     try expectEqualIter(&[_]i32{ -1, 0, 1 }, from(&[_]i32{ -1, 0, 1 }));
 }
 
+/// Returns an iterator for the provided slice.
 inline fn fromSlice(slice: anytype) Iterator(@TypeOf(slice)) {
     return .{ .slice = slice };
 }
 
+/// A generic iterator for slices.
+///
+/// This iterator supports both forward and reverse iteration.
 pub fn SliceIterator(comptime TItem: type) type {
     return struct {
         const Self = @This();
@@ -63,6 +70,9 @@ pub fn SliceIterator(comptime TItem: type) type {
         reversed: bool = false,
         completed: bool = false,
 
+        /// Advances the iterator and returns the next item.
+        ///
+        /// Returns `null` when the sequence is exhausted.
         pub fn next(self: *Self) ?TItem {
             if (self.reversed) {
                 if (self.index >= 0 and !self.completed) {
@@ -85,6 +95,7 @@ pub fn SliceIterator(comptime TItem: type) type {
             return null;
         }
 
+        /// Returns a new iterator that iterates over the slice in reverse order.
         pub fn reverse(self: *const Self) SliceIterator(TItem) {
             return .{
                 .reversed = true,
@@ -101,8 +112,8 @@ pub fn SliceIterator(comptime TItem: type) type {
     };
 }
 
-/// Returns a sequence of numbers going from `from_inclusive` to `to_exclusive` by a step of size 1.
-pub inline fn fromSequence(
+/// Generates a sequence of numbers from `from_inclusive` to `to_exclusive` with a step size of 1.
+pub inline fn sequence(
     /// The type of the numbers in the sequence.
     comptime TNumber: type,
     /// The value of the first number in the sequence (inclusive).
@@ -117,12 +128,15 @@ pub inline fn fromSequence(
     };
 }
 
-test fromSequence {
-    try expectEqualIter(&[_]u8{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }, fromSequence(u8, 0, 10));
-    try expectEqualIter(&[_]u8{ 10, 9, 8, 7, 6, 5, 4, 3, 2, 1 }, fromSequence(u8, 10, 0));
-    try expectEqualIter(&[_]u8{}, fromSequence(u8, 0, 0));
+test sequence {
+    try expectEqualIter(&[_]u8{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }, sequence(u8, 0, 10));
+    try expectEqualIter(&[_]u8{ 10, 9, 8, 7, 6, 5, 4, 3, 2, 1 }, sequence(u8, 10, 0));
+    try expectEqualIter(&[_]u8{}, sequence(u8, 0, 0));
 }
 
+/// An iterator for generating sequences of numbers with a step size of 1.
+///
+/// TODO: Implement reverse
 pub fn SequenceIterator(comptime TNumber: type) type {
     return struct {
         const Self = @This();
@@ -155,8 +169,8 @@ pub fn SequenceIterator(comptime TNumber: type) type {
     };
 }
 
-/// Returns a sequence of numbers going from `from_inclusive` to `to_exclusive` by a specified step.
-pub inline fn fromSequenceEvery(
+/// Generates a sequence of numbers from `from_inclusive` to `to_exclusive` with a specified step size.
+pub inline fn sequenceEvery(
     /// The type of the numbers in the sequence.
     comptime TNumber: type,
     /// The value of the first number in the sequence (inclusive).
@@ -174,10 +188,13 @@ pub inline fn fromSequenceEvery(
     };
 }
 
-test fromSequenceEvery {
-    try expectEqualIter(&[_]u8{ 0, 2, 4, 6, 8 }, fromSequenceEvery(u8, 0, 10, 2));
+test sequenceEvery {
+    try expectEqualIter(&[_]u8{ 0, 2, 4, 6, 8 }, sequenceEvery(u8, 0, 10, 2));
 }
 
+/// An iterator for generating sequences of numbers with a specified step size.
+///
+/// This iterator generates a sequence from `from_inclusive` to `to_exclusive` with a step size of `step`.
 pub fn SequenceEveryIterator(comptime TNumber: type) type {
     return struct {
         const Self = @This();
@@ -187,6 +204,9 @@ pub fn SequenceEveryIterator(comptime TNumber: type) type {
         step: TNumber,
         current: TNumber,
 
+        /// Advances the iterator and returns the next number in the sequence.
+        ///
+        /// Returns `null` when the sequence is exhausted.
         pub fn next(self: *Self) ?TNumber {
             if (self.current < self.to_exclusive) {
                 const current = self.current;
@@ -199,13 +219,18 @@ pub fn SequenceEveryIterator(comptime TNumber: type) type {
     };
 }
 
-pub fn fromCountdown(starting_number: anytype) CountdownIterator(@TypeOf(starting_number)) {
+/// Generates a countdown sequence starting from the given `starting_number`.
+pub fn countdown(starting_number: anytype) CountdownIterator(@TypeOf(starting_number)) {
     return .{ .current = starting_number - 1 };
+}
+
+test countdown {
+    try expectEqualIter(&[_]u8{ 2, 1, 0 }, countdown(@as(u8, 3)));
 }
 
 // TODO: Need a better name here
 // Or actually need the original function to be typed, but I also need a function with single param?
-pub fn fromCountdown2(comptime T: type) fn (T) CountdownIterator(T) {
+pub fn countdown2(comptime T: type) fn (T) CountdownIterator(T) {
     return struct {
         fn f(starting_number: T) CountdownIterator(T) {
             return .{ .current = starting_number - 1 };
@@ -213,12 +238,18 @@ pub fn fromCountdown2(comptime T: type) fn (T) CountdownIterator(T) {
     }.f;
 }
 
+/// An iterator for generating countdown sequences.
+///
+/// This iterator generates a sequence starting from a given numeric value, decrementing by 1 until reaching 0.
 pub fn CountdownIterator(comptime TItem: type) type {
     return struct {
         const Self = @This();
 
         current: ?TItem,
 
+        /// Advances the iterator and returns the next value in the countdown sequence.
+        ///
+        /// Returns `null` when the sequence is exhausted.
         pub fn next(self: *Self) ?TItem {
             if (self.current) |current_value| {
                 if (current_value > 0) {
@@ -236,11 +267,7 @@ pub fn CountdownIterator(comptime TItem: type) type {
     };
 }
 
-test fromCountdown {
-    try expectEqualIter(&[_]u8{ 2, 1, 0 }, fromCountdown(@as(u8, 3)));
-}
-
-/// Returns the number of items in the iterator.
+/// Counts the number of items in the sequence.
 pub inline fn count(self: anytype) usize {
     var self_copy = self.*;
     var result: usize = 0;
@@ -255,9 +282,9 @@ test count {
     try expectEqual(@as(usize, 3), from("abc").count());
 }
 
-/// Returns the sum of all items in the iterators.
+/// Returns the sum of all items in the sequence.
 ///
-/// Items are expected to support `+=` operator.
+/// Items in the sequence are expected to support the `+=` operator.
 pub inline fn sum(self: anytype) IteratorItem(@TypeOf(self)) {
     var self_copy = self.*;
     var result: IteratorItem(@TypeOf(self)) = 0;
@@ -274,9 +301,9 @@ test sum {
     try expectEqual(@as(f32, -0.9), from(&[_]f32{ -1.5, 0.2, 0.4 }).sum());
 }
 
-/// Returns whether the iterator contains at least one item satisfying the condition function.
+/// Checks if the sequence contains at least one item satisfying the condition function.
 ///
-/// An empty iterator always returns `false`.
+/// An empty sequence always returns `false`.
 pub inline fn any(
     self: anytype,
     comptime function: fn (IteratorItem(@TypeOf(self))) bool,
@@ -296,9 +323,9 @@ test any {
     try expectEqual(true, from("abc1").any(std.ascii.isDigit));
 }
 
-/// Returns whether all items in the iterator satisfy the condition function.
+/// Checks if all items in the sequence satisfy the condition function.
 ///
-/// An empty iterator always returns `true`.
+/// An empty sequence always returns `true`.
 pub inline fn all(
     self: anytype,
     comptime function: fn (IteratorItem(@TypeOf(self))) bool,
@@ -319,7 +346,7 @@ test all {
     try expectEqual(true, from("123").all(std.ascii.isDigit));
 }
 
-/// Returns the first item of the iterator or `null` if iterator is finished.
+/// Returns the first item of the sequence or `null` if the sequence is empty.
 pub inline fn first(self: anytype) ?IteratorItem(@TypeOf(self)) {
     var self_copy = self.*;
     return self_copy.next() orelse null;
@@ -331,7 +358,7 @@ test first {
     try expectEqual(@as(?u8, 'a'), from("abc").first());
 }
 
-/// Returns the last item of the iterator or `null` if iterator is finished.
+/// Returns the last item of the sequence or `null` if the sequence is empty.
 pub inline fn last(self: anytype) ?IteratorItem(@TypeOf(self)) {
     var self_copy = self.*;
     var last_item: ?IteratorItem(@TypeOf(self)) = null;
@@ -347,7 +374,7 @@ test last {
     try expectEqual(@as(?u8, 'c'), from("abc").last());
 }
 
-/// Returns the item at a specified index or `null` if index is out of bounds.
+/// Returns the item at the specified index or `null` if the index is out of bounds.
 pub inline fn elementAt(
     self: anytype,
     index: usize,
@@ -360,8 +387,6 @@ pub inline fn elementAt(
     return self_copy.next();
 }
 
-fn value() void {}
-
 test elementAt {
     try expectEqual(@as(?u8, null), from("").elementAt(0));
     try expectEqual(@as(?u8, 'a'), from("abc").elementAt(0));
@@ -370,7 +395,7 @@ test elementAt {
     try expectEqual(@as(?u8, null), from("abc").elementAt(3));
 }
 
-/// Filters the items using the given function.
+/// Filters the items in the sequence using the given predicate function.
 pub inline fn where(
     self: anytype,
     predicate: anytype,
@@ -379,6 +404,17 @@ pub inline fn where(
         .prev_iter = self.*,
         .predicate = predicate,
     };
+}
+
+test where {
+    try expectEqualIter("123", from("a12bcd3ef").where(std.ascii.isDigit));
+    try expectEqualIter("", from("abcd").where(std.ascii.isDigit));
+    try expectEqualIter("222", from("a12bcd32e2f").where(struct {
+        needle: u8,
+        pub fn f(self: @This(), item: u8) bool {
+            return self.needle == item;
+        }
+    }{ .needle = '2' }));
 }
 
 pub fn WhereIterator(
@@ -405,18 +441,7 @@ pub fn WhereIterator(
     };
 }
 
-test where {
-    try expectEqualIter("123", from("a12bcd3ef").where(std.ascii.isDigit));
-    try expectEqualIter("", from("abcd").where(std.ascii.isDigit));
-    try expectEqualIter("222", from("a12bcd32e2f").where(struct {
-        needle: u8,
-        pub fn f(self: @This(), item: u8) bool {
-            return self.needle == item;
-        }
-    }{ .needle = '2' }));
-}
-
-/// Transforms the items using the given function.
+/// Transforms the items in the sequence using the given selector function.
 pub inline fn select(
     self: anytype,
     selector: anytype,
@@ -425,6 +450,17 @@ pub inline fn select(
         .prev_iter = self.*,
         .selector = selector,
     };
+}
+
+test select {
+    try expectEqualIter(&[_]bool{ false, true, true, false, false, true }, from("a12bc3").select(std.ascii.isDigit));
+    try expectEqualIter(&[_]bool{}, from("").select(std.ascii.isDigit));
+    try expectEqualIter("234", from("123").select(struct {
+        state: u8,
+        pub fn f(self: @This(), item: u8) u8 {
+            return item + self.state;
+        }
+    }{ .state = 1 }));
 }
 
 pub fn SelectIterator(
@@ -449,18 +485,7 @@ pub fn SelectIterator(
     };
 }
 
-test select {
-    try expectEqualIter(&[_]bool{ false, true, true, false, false, true }, from("a12bc3").select(std.ascii.isDigit));
-    try expectEqualIter(&[_]bool{}, from("").select(std.ascii.isDigit));
-    try expectEqualIter("234", from("123").select(struct {
-        state: u8,
-        pub fn f(self: @This(), item: u8) u8 {
-            return item + self.state;
-        }
-    }{ .state = 1 }));
-}
-
-/// Transforms the items using the given function and flattens the result.
+/// Transforms and flattens the items in the sequence using the given selector function.
 pub inline fn selectMany(
     self: anytype,
     selector: anytype,
@@ -470,6 +495,10 @@ pub inline fn selectMany(
         .slice_iter = null,
         .selector = selector,
     };
+}
+
+test selectMany {
+    try expectEqualIter(&[_]u8{ 0, 1, 0, 2, 1, 0 }, from(&[_]u8{ 1, 2, 3 }).selectMany(countdown2(u8)));
 }
 
 // How to resolve type
@@ -510,10 +539,6 @@ pub fn SelectManyIterator(
 
         pub usingnamespace enumerable;
     };
-}
-
-test selectMany {
-    try expectEqualIter(&[_]u8{ 0, 1, 0, 2, 1, 0 }, from(&[_]u8{ 1, 2, 3 }).selectMany(fromCountdown2(u8)));
 }
 
 /// Yields items in a sliding window of a specified size.
@@ -601,9 +626,8 @@ pub fn WindowIterator(
     };
 }
 
-/// Aggregates items using the given function into a single value.
-///
-/// Unlike `aggregate`, returns an iterator that can yield intermediate results.
+/// Aggregates items in the sequence using the given selector function and seed value.
+/// Returns an iterator that yields intermediate results.
 pub inline fn scan(
     self: anytype,
     selector: anytype,
@@ -652,9 +676,8 @@ pub fn ScanIterator(
     };
 }
 
-/// Aggregates items using the given function into a single value.
-///
-/// Unlike `scan`, finishes iterations immediately and returns the result.
+/// Aggregates items in the sequence using the given selector function and seed value.
+/// Finishes iterations immediately and returns the final result.
 pub inline fn aggregate(
     self: anytype,
     selector: anytype,
@@ -757,8 +780,6 @@ test indexOf {
 }
 
 /// Concatenates two sequences.
-///
-/// Current sequence goes first, and once it is finished it continues with the other one.
 pub inline fn concat(
     self: anytype,
     other_iter: anytype,
@@ -790,9 +811,9 @@ pub fn ConcatIterator(
     };
 }
 
-/// Combines the items of two iterators into a single iterator of pairs.
+/// Combines the items of two sequences into a single sequence of pairs.
 ///
-/// First element of the pair comes from the first iterator, and the second element comes from the second iterator.
+/// The first element of the pair comes from the first sequence, and the second element comes from the second sequence.
 pub inline fn zip(
     self: anytype,
     other_iter: anytype,
@@ -871,7 +892,7 @@ pub fn AppendIterator(
     };
 }
 
-/// Prepends an item to the start of the iterator.
+/// Prepends an item to the start of the sequence.
 pub inline fn prepend(
     self: anytype,
     item: IteratorItem(@TypeOf(self)),
@@ -951,7 +972,7 @@ pub fn IntersperseIterator(
     };
 }
 
-/// Returns an iterator, which can peek the next value without advancing the iterator.
+/// Returns an iterator, which can peek the next value without advancing the sequence.
 pub inline fn peekable(
     self: anytype,
 ) PeekableIterator(@TypeOf(self.*)) {
@@ -1067,9 +1088,8 @@ pub fn TakeEveryIterator(
     };
 }
 
-/// Returns items while the condition function returns `true`.
-///
-/// Unlike `where`, finishes when the condition function returns `false` the first time.
+/// Returns items as long as the condition function returns `true`.
+/// Stops when the condition function returns `false` for the first time.
 pub inline fn takeWhile(
     self: anytype,
     predicate: anytype,
@@ -1144,7 +1164,7 @@ pub inline fn toArrayList(
 }
 
 test toArrayList {
-    var arrayList = try fromCountdown(@as(u8, 4)).toArrayList(std.testing.allocator);
+    var arrayList = try countdown(@as(u8, 4)).toArrayList(std.testing.allocator);
     defer arrayList.deinit();
     try std.testing.expectEqualSlices(u8, &[_]u8{ 3, 2, 1, 0 }, arrayList.items);
 }
@@ -1325,7 +1345,7 @@ pub fn InspectIterator(
 
 /// Returns the maximum item in a sequence.
 ///
-/// If the iterator is empty, `null` is returned.
+/// Returns `null` if the sequence is empty.
 pub inline fn max(self: anytype) ?IteratorItem(@TypeOf(self)) {
     var self_copy = self.*;
     var maybe_max_value: ?IteratorItem(@TypeOf(self)) = null;
@@ -1345,7 +1365,7 @@ test max {
 
 /// Returns the maximum item of a sequence as determined by the value returned from the selector function.
 ///
-/// If the iterator is empty, `null` is returned.
+/// Returns `null` if the sequence is empty.
 pub inline fn maxBy(
     self: anytype,
     selector: anytype,
@@ -1384,7 +1404,7 @@ test maxBy {
 
 /// Returns the minimum item of a sequence.
 ///
-/// If the iterator is empty, `null` is returned.
+/// Returns `null` if the sequence is empty.
 pub inline fn min(self: anytype) ?IteratorItem(@TypeOf(self)) {
     const TItem = IteratorItem(@TypeOf(self));
     var self_copy = self.*;
@@ -1402,9 +1422,9 @@ test min {
     try std.testing.expectEqual(@as(?u8, null), from(&[_]u8{}).min());
 }
 
-/// Returns the minimum item of an iterator as determined by the value returned from the specified function.
+/// Returns the minimum item of an sequence as determined by the value returned from the specified function.
 ///
-/// If the iterator is empty, `null` is returned.
+/// Returns `null` if the sequence is empty.
 pub inline fn minBy(
     self: anytype,
     selector: anytype,
@@ -1445,7 +1465,7 @@ test minBy {
     );
 }
 
-/// Returns whether the items in the iterator are sorted in ascending order.
+/// Returns whether the items in the sequence are sorted in ascending order.
 pub inline fn isSortedAscending(self: anytype) bool {
     var self_copy = self.*;
     var maybe_previous: ?IteratorItem(@TypeOf(self)) = null;
@@ -1465,7 +1485,7 @@ test isSortedAscending {
     try std.testing.expectEqual(false, from(&[_]u8{ 1, 3, 2 }).isSortedAscending());
 }
 
-/// Returns whether the items in the iterator are sorted in descending order.
+/// Returns whether the items in the sequence are sorted in descending order.
 pub inline fn isSortedDescending(self: anytype) bool {
     var self_copy = self.*;
     var maybe_previous: ?IteratorItem(@TypeOf(self)) = null;
@@ -1485,8 +1505,8 @@ test isSortedDescending {
     try std.testing.expectEqual(false, from(&[_]u8{ 3, 1, 2 }).isSortedDescending());
 }
 
-/// Returns whether the items in the sequence are sorted in an ascending order,
-/// as determined by the value returned from the specified selector.
+/// Returns whether the items in the sequence are sorted in ascending order
+/// based on the values returned from the specified selector.
 pub inline fn isSortedAscendingBy(
     self: anytype,
     selector: anytype,
@@ -1536,8 +1556,8 @@ test isSortedAscendingBy {
     );
 }
 
-/// Returns whether the items in the sequence are sorted in a descending order,
-/// as determined by the value returned from the specified selector.
+/// Returns whether the items in the sequence are sorted in descending order
+/// based on the values returned from the specified selector.
 pub inline fn isSortedDescendingBy(
     self: anytype,
     selector: anytype,
@@ -1587,7 +1607,7 @@ test isSortedDescendingBy {
     );
 }
 
-/// Returns an average value of all the numbers in the sequence.
+/// Returns the average value of all the numbers in the sequence.
 pub inline fn average(self: anytype) IteratorItem(@TypeOf(self)) {
     const TItem = IteratorItem(@TypeOf(self));
     var self_copy = self.*;
@@ -1612,8 +1632,8 @@ pub inline fn average(self: anytype) IteratorItem(@TypeOf(self)) {
 }
 
 test average {
-    try std.testing.expectEqual(@as(f32, 2.5), fromSequence(f32, 1, 5).average());
-    try std.testing.expectEqual(@as(u32, 2), fromSequence(u32, 1, 5).average());
+    try std.testing.expectEqual(@as(f32, 2.5), sequence(f32, 1, 5).average());
+    try std.testing.expectEqual(@as(u32, 2), sequence(u32, 1, 5).average());
 }
 
 /// Returns a truncated average value of all the numbers in the sequence.
