@@ -927,6 +927,8 @@ pub fn PrependIterator(
                 return null;
             }
         }
+
+        pub usingnamespace enumerable;
     };
 }
 
@@ -969,6 +971,8 @@ pub fn IntersperseIterator(
             }
             return null;
         }
+
+        pub usingnamespace enumerable;
     };
 }
 
@@ -1695,4 +1699,15 @@ inline fn expectEqualIter(expected_slice: anytype, actual_iter: anytype) !void {
     }
     const actual_slice = actual_array_list.items;
     try std.testing.expectEqualSlices(ItemType, expected_slice, actual_slice);
+}
+
+test "example" {
+    try expectEqualIter(
+        "(1,2,3)",
+        from(std.mem.tokenizeAny(u8, "foo=1;bar=2;baz=3", "=;").buffer)
+            .where(std.ascii.isDigit)
+            .intersperse(',')
+            .prepend('(')
+            .append(')'),
+    );
 }
