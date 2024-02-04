@@ -332,16 +332,16 @@ test any {
     try expectEqual(false, from("abc_def").any(Closure{ .needle = '1' }));
 }
 
-/// Checks if all items in the sequence satisfy the condition function.
+/// Checks if all items in the sequence satisfy the provided condition.
 ///
 /// An empty sequence always returns `true`.
 pub inline fn all(
     self: anytype,
-    comptime function: fn (IteratorItem(@TypeOf(self))) bool,
+    condition: anytype,
 ) bool {
     var self_copy = self.*;
     while (self_copy.next()) |item| {
-        if (!function(item)) {
+        if (!meta.callCallable(bool, condition, .{item})) {
             return false;
         }
     }
@@ -353,6 +353,15 @@ test all {
     try expectEqual(false, from("abc").all(std.ascii.isDigit));
     try expectEqual(false, from("abc123").all(std.ascii.isDigit));
     try expectEqual(true, from("123").all(std.ascii.isDigit));
+
+    const Closure = struct {
+        divider: u8,
+        pub fn hasZeroRemainder(self: @This(), item: u8) bool {
+            return item % self.divider == 0;
+        }
+    };
+    try expectEqual(true, from(&[_]u8{ 3, 6, 9 }).all(Closure{ .divider = 3 }));
+    try expectEqual(false, from(&[_]u8{ 5, 9, 15, 20 }).all(Closure{ .divider = 5 }));
 }
 
 /// Returns the first item of the sequence or `null` if the sequence is empty.
