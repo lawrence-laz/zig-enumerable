@@ -301,16 +301,16 @@ test sum {
     try expectEqual(@as(f32, -0.9), from(&[_]f32{ -1.5, 0.2, 0.4 }).sum());
 }
 
-/// Checks if the sequence contains at least one item satisfying the condition function.
+/// Checks if the sequence contains at least one item satisfying the provided condition.
 ///
 /// An empty sequence always returns `false`.
 pub inline fn any(
     self: anytype,
-    comptime function: fn (IteratorItem(@TypeOf(self))) bool,
+    condition: anytype,
 ) bool {
     var self_copy = self.*;
     while (self_copy.next()) |item| {
-        if (function(item)) {
+        if (meta.callCallable(bool, condition, .{item})) {
             return true;
         }
     }
@@ -321,6 +321,15 @@ test any {
     try expectEqual(false, from("").any(std.ascii.isDigit));
     try expectEqual(false, from("abc").any(std.ascii.isDigit));
     try expectEqual(true, from("abc1").any(std.ascii.isDigit));
+
+    const Closure = struct {
+        needle: u8,
+        pub fn f(self: @This(), item: u8) bool {
+            return item == self.needle;
+        }
+    };
+    try expectEqual(true, from("abc_def").any(Closure{ .needle = '_' }));
+    try expectEqual(false, from("abc_def").any(Closure{ .needle = '1' }));
 }
 
 /// Checks if all items in the sequence satisfy the condition function.
