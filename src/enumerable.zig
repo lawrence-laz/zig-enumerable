@@ -216,6 +216,8 @@ pub fn SequenceEveryIterator(comptime TNumber: type) type {
 
             return null;
         }
+
+        pub usingnamespace enumerable;
     };
 }
 
@@ -826,6 +828,8 @@ pub fn ConcatIterator(
         pub fn next(self: *Self) ?Item {
             return self.prev_iter.next() orelse self.next_iter.next() orelse null;
         }
+
+        pub usingnamespace enumerable;
     };
 }
 
@@ -869,6 +873,8 @@ pub fn ZipIterator(
             }
             return null;
         }
+
+        pub usingnamespace enumerable;
     };
 }
 
@@ -907,6 +913,8 @@ pub fn AppendIterator(
                 return null;
             }
         }
+
+        pub usingnamespace enumerable;
     };
 }
 
@@ -1032,6 +1040,8 @@ pub fn PeekableIterator(
                 return null;
             }
         }
+
+        pub usingnamespace enumerable;
     };
 }
 
@@ -1071,6 +1081,8 @@ pub fn TakeIterator(
             }
             return null;
         }
+
+        pub usingnamespace enumerable;
     };
 }
 
@@ -1107,6 +1119,8 @@ pub fn TakeEveryIterator(
             }
             return self.prev_iter.next();
         }
+
+        pub usingnamespace enumerable;
     };
 }
 
@@ -1169,6 +1183,8 @@ pub fn TakeWhileIterator(
                 return null;
             }
         }
+
+        pub usingnamespace enumerable;
     };
 }
 
@@ -1362,6 +1378,8 @@ pub fn InspectIterator(
             }
             return null;
         }
+
+        pub usingnamespace enumerable;
     };
 }
 
