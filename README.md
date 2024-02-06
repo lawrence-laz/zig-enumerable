@@ -4,7 +4,7 @@ Functional vibes for data processing as sequences.
 
 ```zig
 const std = @import("std");
-const enumerable = @import("path/to/enumerable.zig");
+const enumerable = @import("enumerable");
 
 test "example" {
     try expectEqualIter(
@@ -16,4 +16,21 @@ test "example" {
             .append(')'),
     );
 }
+```
+
+## 📦 Get started
+
+```bash
+zig fetch --save https://github.com/lawrence-laz/zig-enumerable/archive/master.tar.gz
+```
+
+```zig
+// build.zig
+const enumerable = b.dependency("enumerable", .{
+    .target = target,
+    .optimize = optimize,
+});
+
+exe.root_module.addImport("enumerable", enumerable.module("enumerable"));
+```
 
