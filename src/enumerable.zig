@@ -12,7 +12,7 @@ pub fn Iterator(comptime T: type) type {
                 .Array => SliceIterator(std.meta.Elem(T)),
                 else => type_info.child,
             },
-            .Slice => SliceIterator(std.meta.Elem(T)),
+            .Slice => if (type_info.is_const) SliceIterator(std.meta.Elem(T)) else MutSliceIterator(std.meta.Elem(T)),
             else => T,
         },
         else => T,
@@ -35,7 +35,7 @@ pub inline fn from(iterable: anytype) Iterator(@TypeOf(iterable)) {
                 .Array => fromSlice(iterable),
                 else => iterable.*,
             },
-            .Slice => fromSlice(iterable),
+            .Slice => if (info.is_const) fromSlice(iterable) else fromMutSlice(iterable),
             else => iterable,
         },
         else => iterable,
@@ -54,7 +54,7 @@ test from {
 }
 
 /// Returns an iterator for the provided slice.
-inline fn fromSlice(slice: anytype) Iterator(@TypeOf(slice)) {
+inline fn fromSlice(slice: anytype) SliceIterator(std.meta.Elem(@TypeOf(slice))) {
     return .{ .slice = slice };
 }
 
@@ -109,6 +109,52 @@ pub fn SliceIterator(comptime TItem: type) type {
         }
 
         pub usingnamespace enumerable;
+        pub usingnamespace enumerable_mutable_and_indexable;
+    };
+}
+
+/// Returns a mutable iterator for the provided slice.
+inline fn fromMutSlice(slice: anytype) MutSliceIterator(std.meta.Elem(@TypeOf(slice))) {
+    return .{ .slice = slice };
+}
+
+/// A generic mutable iterator for slices.
+pub fn MutSliceIterator(comptime TItem: type) type {
+    return struct {
+        const Self = @This();
+
+        slice: []TItem,
+        index: usize = 0,
+        reversed: bool = false,
+        completed: bool = false,
+
+        /// Advances the iterator and returns the next item.
+        ///
+        /// Returns `null` when the sequence is exhausted.
+        pub fn next(self: *Self) ?TItem {
+            if (self.reversed) {
+                if (self.index >= 0 and !self.completed) {
+                    const item = self.slice[self.index];
+                    if (self.index > 0) {
+                        self.index -= 1;
+                    } else {
+                        self.completed = true;
+                    }
+                    return item;
+                }
+            } else {
+                if (self.index < self.slice.len) {
+                    const item = self.slice[self.index];
+                    self.index += 1;
+                    return item;
+                }
+            }
+
+            return null;
+        }
+
+        pub usingnamespace enumerable;
+        pub usingnamespace enumerable_mutable_and_indexable;
     };
 }
 
@@ -1548,6 +1594,22 @@ test minBy {
         from(&[_]Person{}).minBy(Person.getAge),
     );
 }
+
+/// Namespace for functions that require mutable and indexable iterators.
+const enumerable_mutable_and_indexable = struct {
+    fn lessThan(_: void, lhs: u8, rhs: u8) bool {
+        return lhs < rhs;
+    }
+    pub inline fn orderAscending(self: anytype) @TypeOf(self.*) {
+        std.mem.sort(IteratorItem(@TypeOf(self)), self.slice, {}, lessThan);
+        return self.*;
+    }
+    test orderAscending {
+        var input = std.BoundedArray(u8, 8){};
+        try input.appendSlice("cbdafghe");
+        try expectEqualIter("abcdefgh", enumerable.from(input.slice()).orderAscending());
+    }
+};
 
 /// Returns whether the items in the sequence are sorted in ascending order.
 pub inline fn isSortedAscending(self: anytype) bool {
