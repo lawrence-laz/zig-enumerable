@@ -833,6 +833,49 @@ pub fn ConcatIterator(
     };
 }
 
+/// Filters the items in the sequence to exclude all items from the other sequence.
+pub inline fn except(
+    self: anytype,
+    other: anytype,
+) ExceptIterator(@TypeOf(self.*), @TypeOf(from(other))) {
+    return .{
+        .prev_iter = self.*,
+        .other_iter = from(other),
+    };
+}
+
+test except {
+    try expectEqualIter("ace", from("abcdef").except("bdf"));
+    try expectEqualIter("", from("abc").except("abc"));
+    try expectEqualIter("", from("abc").except("cba"));
+    try expectEqualIter("abc", from("abc").except("def"));
+    try expectEqualIter("", from("").except("abc"));
+}
+
+pub fn ExceptIterator(
+    comptime TPrevIter: type,
+    comptime TOtherIter: type,
+) type {
+    return struct {
+        const Self = @This();
+        const Item = IteratorItem(TPrevIter);
+
+        prev_iter: TPrevIter,
+        other_iter: TOtherIter,
+
+        pub fn next(self: *Self) ?Item {
+            while (self.prev_iter.next()) |item| {
+                if (!self.other_iter.contains(item)) {
+                    return item;
+                }
+            }
+            return null;
+        }
+
+        pub usingnamespace enumerable;
+    };
+}
+
 /// Combines the items of two sequences into a single sequence of pairs.
 ///
 /// The first element of the pair comes from the first sequence, and the second element comes from the second sequence.
