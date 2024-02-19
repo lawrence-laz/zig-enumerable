@@ -802,16 +802,17 @@ test indexOf {
 /// Concatenates two sequences.
 pub inline fn concat(
     self: anytype,
-    other_iter: anytype,
-) ConcatIterator(@TypeOf(self.*), @TypeOf(other_iter)) {
+    other: anytype,
+) ConcatIterator(@TypeOf(self.*), @TypeOf(from(other))) {
     return .{
         .prev_iter = self.*,
-        .next_iter = other_iter,
+        .next_iter = from(other),
     };
 }
 
 test concat {
     try expectEqualIter("abcdef", from("abc").concat(from("def")));
+    try expectEqualIter("abcdef", from("abc").concat("def"));
 }
 
 pub fn ConcatIterator(
