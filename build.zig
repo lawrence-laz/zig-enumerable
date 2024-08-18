@@ -6,12 +6,12 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     _ = b.addModule("enumerable", .{
-        .root_source_file = .{ .path = "src/enumerable.zig" },
+        .root_source_file = b.path("src/enumerable.zig"),
     });
 
     const lib = b.addStaticLibrary(.{
         .name = "enumerable",
-        .root_source_file = .{ .path = "src/enumerable.zig" },
+        .root_source_file = b.path("src/enumerable.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -19,7 +19,7 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(lib);
 
     const main_tests = b.addTest(.{
-        .root_source_file = .{ .path = "src/enumerable.zig" },
+        .root_source_file = b.path("src/enumerable.zig"),
         .target = target,
         .optimize = optimize,
     });
